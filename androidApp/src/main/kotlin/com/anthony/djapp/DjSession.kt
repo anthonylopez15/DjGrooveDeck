@@ -1,7 +1,12 @@
 package com.anthony.djapp
 
+import android.content.BroadcastReceiver
 import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
+import android.os.Build
 import android.content.res.Configuration
 import com.anthony.djapp.engine.AndroidAudioOutput
 import com.anthony.djapp.engine.DjMixer
@@ -31,6 +36,22 @@ object DjSession {
 
             // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
             // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
+            // Fone saiu ou o Bluetooth caiu: o Android passaria o som para o alto-falante, no meio do set.
+            // Como em qualquer player, pausa (e guarda o estado); o DJ decide quando voltar.
+            val noisy = object : BroadcastReceiver() {
+                override fun onReceive(c: Context, intent: Intent) {
+                    if (intent.action != AudioManager.ACTION_AUDIO_BECOMING_NOISY || !anyPlaying) return
+                    pauseAll()
+                    controller.systemNotice = "Saída de áudio desconectada: música pausada"
+                }
+            }
+            val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.registerReceiver(noisy, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                context.registerReceiver(noisy, filter)
+            }
+
             context.registerComponentCallbacks(object : ComponentCallbacks2 {
                 override fun onTrimMemory(level: Int) {
                     if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND && !activityVisible) {

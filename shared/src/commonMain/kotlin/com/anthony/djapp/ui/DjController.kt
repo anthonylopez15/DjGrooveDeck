@@ -272,6 +272,9 @@ class DjController(private val mixer: DjMixer) {
     /** A tela está à vista; os decks só são recarregados do arquivo com ela à vista. */
     var foreground by mutableStateOf(true)
 
+    /** Aviso vindo de fora da tela (ex.: o fone saiu e a música foi pausada); a tela mostra e limpa. */
+    var systemNotice by mutableStateOf<String?>(null)
+
     /** Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. */
     fun releaseIdleAudio(): Int = listOf(a, b).count { it.releaseAudio() }
 

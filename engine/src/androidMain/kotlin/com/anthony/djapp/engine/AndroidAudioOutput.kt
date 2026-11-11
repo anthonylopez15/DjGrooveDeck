@@ -2,10 +2,12 @@ package com.anthony.djapp.engine
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Process
+import android.util.Log
 
 /**
  * Saída via AudioTrack em modo de baixa latência, PCM float.
@@ -53,6 +55,12 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .build()
+            .also { track ->
+                // diagnóstico: para onde o áudio está indo (alto-falante, fone, Bluetooth...)
+                track.addOnRoutingChangedListener({ r ->
+                    Log.i(TAG, "rota: ${describe(r.routedDevice)}")
+                }, null)
+            }
     }
 
     private fun sleepQuietly(ms: Long) {
@@ -75,11 +83,15 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
             while (w.alive) {
                 if (at == null) {
                     at = try {
-                        createTrack(chunkFrames).also { it.play() }
+                        createTrack(chunkFrames).also {
+                            it.play()
+                            Log.i(TAG, "saída aberta: ${sampleRate} Hz, ${chunkFrames} frames/bloco, rota ${describe(it.routedDevice)}")
+                        }
                     } catch (e: Exception) {
                         null
                     }
                     if (at == null) { // sem saída agora (ex.: o fone saiu): tenta de novo logo
+                        Log.w(TAG, "sem saída de áudio; tentando de novo")
                         sleepQuietly(300)
                         continue
                     }
@@ -88,6 +100,7 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
                 val written = at.write(buf, 0, buf.size, AudioTrack.WRITE_BLOCKING)
                 if (written < 0) {
                     // a rota de áudio mudou ou o track morreu (DEAD_OBJECT): recria em vez de ficar mudo
+                    Log.w(TAG, "escrita falhou ($written); recriando o AudioTrack")
                     runCatching { at.release() }
                     at = null
                     sleepQuietly(150)
@@ -98,6 +111,22 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
                 runCatching { it.release() }
             }
         }, "dj-audio").also { it.start() }
+    }
+
+    companion object {
+        private const val TAG = "DjAudio"
+
+        private fun describe(d: AudioDeviceInfo?): String {
+            if (d == null) return "nenhuma"
+            val kind = when (d.type) {
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "alto-falante"
+                AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET -> "fone com fio"
+                AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_DEVICE -> "USB"
+                AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth"
+                else -> "tipo ${d.type}"
+            }
+            return "$kind (${d.productName})"
+        }
     }
 
     override fun stop() {

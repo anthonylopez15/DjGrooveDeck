@@ -52,4 +52,6 @@ Roteiros já executados com sucesso:
 - Pedido de memória em segundo plano e recarga ao voltar.
 - Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
-Não verificado: desconexão de fone/Bluetooth (recriação do `AudioTrack` em troca de rota real) e o caminho de erro de memória com arquivos gigantes (só compilado).
+- Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.
+
+Não verificado: fone com fio/USB, o caminho de recriação do `AudioTrack` após `DEAD_OBJECT` (não aconteceu nos testes) e o erro de memória com arquivos gigantes (só compilado).

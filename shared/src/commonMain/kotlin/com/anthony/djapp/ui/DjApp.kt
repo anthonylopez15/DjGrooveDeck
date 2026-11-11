@@ -110,6 +110,14 @@ fun DjApp(controller: DjController, library: Library) {
         }
     }
 
+    // avisos do sistema (fone desconectado...) entram no mesmo aviso do topo
+    LaunchedEffect(controller.systemNotice) {
+        controller.systemNotice?.let {
+            notice = it
+            controller.systemNotice = null
+        }
+    }
+
     // aviso curto no topo; some sozinho
     LaunchedEffect(notice) {
         if (notice != null) {

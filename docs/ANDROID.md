@@ -24,6 +24,18 @@ onStop               foreground = false; se tocando inicia o serviço, senão ou
 - **Notificação**: toque abre o app; ação **Pausar** pausa os dois decks.
 - Sem a permissão `POST_NOTIFICATIONS` (Android 13+) a música segue tocando; só a notificação não aparece.
 
+## Troca de saída de áudio (fone, Bluetooth)
+
+- **Saída desconectada com música tocando** (fone com fio sai, Bluetooth desliga ou cai): `DjSession` recebe `ACTION_AUDIO_BECOMING_NOISY`, pausa os dois decks, guarda o estado e mostra "Saída de áudio desconectada: música pausada". Sem isso o Android passaria o som para o alto-falante no meio do set.
+- **Saída conectada**: o próprio Android redireciona o `AudioTrack` aberto; não é preciso recriar. Se uma escrita falhar (`DEAD_OBJECT`), `AndroidAudioOutput` recria o track.
+- **Diagnóstico**: tag `DjAudio` no logcat — taxa, tamanho de bloco e rota ao abrir a saída, cada mudança de rota e cada recriação:
+
+```bash
+adb logcat -s DjAudio
+```
+
+Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desconexão chega ~1 s antes de a rota mudar para o alto-falante, então a música já está pausada quando o som sairia no celular; ao religar, a rota volta ao Bluetooth sem recriar a saída e o play funciona. Não testado: fone com fio e USB.
+
 ## Biblioteca (SAF)
 
 - O usuário escolhe pastas (`OpenDocumentTree`); as permissões são persistidas.
