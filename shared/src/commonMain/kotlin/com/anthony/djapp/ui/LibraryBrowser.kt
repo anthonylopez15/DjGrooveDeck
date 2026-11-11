@@ -23,6 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,6 +40,7 @@ fun LibraryBrowser(
     library: Library,
     status: String?,
     modifier: Modifier = Modifier,
+    rowLoading: (String) -> Pair<Float, Color>? = { null },
     onPick: (LibraryEntry) -> Unit,
 ) {
     var stack by remember { mutableStateOf(listOf<LibraryEntry>()) } // vazio = raiz
@@ -121,6 +125,16 @@ fun LibraryBrowser(
                     Row(
                         Modifier
                             .fillMaxWidth()
+                            // faixa carregando: a linha se preenche da esquerda para a direita
+                            .drawBehind {
+                                val (progress, color) = rowLoading(e.id) ?: return@drawBehind
+                                val w = size.width * progress.coerceIn(0f, 1f)
+                                if (w > 0f) {
+                                    drawRect(color.copy(alpha = 0.28f), size = Size(w, size.height))
+                                    val edge = 3.dp.toPx()
+                                    drawRect(color, Offset((w - edge).coerceAtLeast(0f), 0f), Size(edge, size.height))
+                                }
+                            }
                             .clickable { if (e.isFolder) stack = stack + e else onPick(e) }
                             .padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,

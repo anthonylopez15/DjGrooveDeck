@@ -15,7 +15,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var controller: DjController
     private lateinit var library: AndroidLibrary
 
+    /**
+     * True enquanto o seletor de pastas do sistema está aberto: ele cobre o app (a tela sai de cena),
+     * mas a música que está tocando não pode parar por causa disso.
+     */
+    private var pickingFolder = false
+
     private val folderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        pickingFolder = false
         if (uri != null) library.onFolderPicked(uri)
     }
 
@@ -24,7 +31,10 @@ class MainActivity : ComponentActivity() {
         output = AndroidAudioOutput(this)
         mixer = DjMixer(output.sampleRate)
         controller = DjController(mixer)
-        library = AndroidLibrary(applicationContext) { folderPicker.launch(null) }
+        library = AndroidLibrary(applicationContext) {
+            pickingFolder = true
+            folderPicker.launch(null)
+        }
 
         setContent { DjApp(controller, library) }
     }
@@ -35,8 +45,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        // Sem serviço em primeiro plano ainda: ao sair da tela o áudio para.
-        output.stop()
+        // Sem serviço em primeiro plano ainda: ao sair da tela o áudio para, exceto atrás do
+        // seletor de pastas, que é rápido e deve deixar a música tocando.
+        if (!pickingFolder) output.stop()
         super.onStop()
     }
 }

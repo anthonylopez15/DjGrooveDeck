@@ -31,6 +31,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,6 +83,8 @@ fun DjApp(controller: DjController, library: Library) {
     var tab by remember { mutableStateOf(Tab.Waves) }
     var status by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    // faixas em carregamento: id do arquivo -> deck de destino (para o preenchimento na lista)
+    val loadingEntries = remember { mutableStateMapOf<String, DeckId>() }
     val scope = rememberCoroutineScope()
 
     // aviso curto no topo; some sozinho
@@ -113,18 +116,29 @@ fun DjApp(controller: DjController, library: Library) {
                 )
                 if (browsing) {
                     TransportRow(controller)
-                    LibraryBrowser(library, status, Modifier.weight(1f)) { entry ->
-                        val deck = controller.deck(target)
+                    LibraryBrowser(
+                        library,
+                        status,
+                        Modifier.weight(1f),
+                        rowLoading = { entryId ->
+                            loadingEntries[entryId]?.let { id ->
+                                controller.deck(id).loadProgress to (if (id == DeckId.A) DeckAColor else DeckBColor)
+                            }
+                        },
+                    ) { entry ->
+                        val deckId = target
+                        val deck = controller.deck(deckId)
                         if (deck.playingNow) {
-                            status = mustPauseMessage(target)
+                            status = mustPauseMessage(deckId)
                         } else if (!deck.loading) scope.launch {
                             status = null
                             deck.startLoading(entry.name)
+                            loadingEntries[entry.id] = deckId
                             try {
-                                val loaded = controller.loadTrack(target, library.decode(entry, deck::updateLoadProgress))
+                                val loaded = controller.loadTrack(deckId, library.decode(entry, deck::updateLoadProgress))
                                 if (!loaded) { // o deck começou a tocar durante a decodificação
                                     deck.cancelLoading()
-                                    status = mustPauseMessage(target)
+                                    status = mustPauseMessage(deckId)
                                 }
                             } catch (e: CancellationException) {
                                 deck.cancelLoading()
@@ -132,6 +146,8 @@ fun DjApp(controller: DjController, library: Library) {
                             } catch (e: Exception) {
                                 deck.cancelLoading()
                                 status = "Não consegui abrir: ${e.message}"
+                            } finally {
+                                loadingEntries.remove(entry.id)
                             }
                         }
                     }
