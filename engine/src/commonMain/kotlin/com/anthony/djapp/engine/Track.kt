@@ -64,12 +64,26 @@ class Track(
     val peaks: FloatArray = overviewPeaks(detail),
     /** BPM e batidas detectados (andamento fixo); null se não houve periodicidade clara. */
     val beatGrid: BeatGrid? = BpmDetector.detect(pcm, sampleRate),
+    /** Tamanho da faixa em frames; só difere do PCM numa faixa [released] (sem áudio, só onda e grade). */
+    val frames: Int = pcm.size / 2,
 ) {
     init {
         require(pcm.size % 2 == 0) { "PCM deve ser estéreo intercalado" }
+        require(pcm.isEmpty() || pcm.size / 2 == frames) { "frames não bate com o PCM" }
     }
 
-    val frames: Int get() = pcm.size / 2
+    /** Sem o áudio em memória (liberado por falta de RAM): mantém duração, onda e grade de batidas. */
+    val released: Boolean get() = pcm.isEmpty() && frames > 0
+
+    /** Cópia leve, sem o PCM, para o app não segurar dezenas de MB com a tela fora de cena. */
+    fun releasedCopy(): Track = Track(name, sampleRate, ShortArray(0), detail, peaks, beatGrid, frames)
+
+    /** Esta faixa (liberada) com o áudio [pcm] de volta, mantendo onda e grade. */
+    fun withPcm(pcm: ShortArray): Track {
+        require(pcm.size / 2 == frames) { "o áudio recarregado tem outro tamanho" }
+        return Track(name, sampleRate, pcm, detail, peaks, beatGrid, frames)
+    }
+
     val durationSec: Double get() = frames.toDouble() / sampleRate
 
     companion object {

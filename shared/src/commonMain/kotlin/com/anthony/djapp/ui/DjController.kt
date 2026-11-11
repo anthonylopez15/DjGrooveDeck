@@ -112,16 +112,45 @@ class DeckController(private val deck: Deck) {
         return if (d > 0.0) (positionSec / d).toFloat().coerceIn(0f, 1f) else 0f
     }
 
+    /** De onde veio a faixa: permite recarregar o áudio depois de soltá-lo por falta de memória. */
+    var source: LibraryEntry? = null
+        private set
+
+    /** O áudio foi solto da memória (posição, tempo etc. continuam); precisa recarregar antes de tocar. */
+    var audioReleased by mutableStateOf(false)
+        private set
+
     /** false se o deck está tocando (regra: não troca a faixa enquanto toca). */
-    fun load(track: Track): Boolean {
+    fun load(track: Track, source: LibraryEntry? = null): Boolean {
         if (!deck.load(track)) return false
         this.track = track
+        this.source = source
+        audioReleased = false
         loadingName = null
         bpm = track.beatGrid?.bpm
         firstBeatSec = track.beatGrid?.firstBeatSec ?: 0.0
         syncOn = false
         changeTempo(0f)
         poll()
+        return true
+    }
+
+    /**
+     * Solta o PCM decodificado (dezenas de MB) mantendo tudo o mais; só com o deck parado e a origem
+     * conhecida. Devolve se soltou.
+     */
+    fun releaseAudio(): Boolean {
+        if (source == null || audioReleased || !deck.releaseAudio()) return false
+        track = deck.track // cópia leve: duração, onda e grade seguem à mostra
+        audioReleased = true
+        return true
+    }
+
+    /** Devolve o áudio recarregado de [source]; o deck volta como estava. */
+    fun restoreAudio(reloaded: Track): Boolean {
+        if (!audioReleased || !deck.restoreAudio(reloaded.pcm)) return false
+        track = deck.track
+        audioReleased = false
         return true
     }
 
@@ -188,6 +217,12 @@ class DjController(private val mixer: DjMixer) {
     var master by mutableFloatStateOf(0.8f)
         private set
 
+    /** A tela está à vista; os decks só são recarregados do arquivo com ela à vista. */
+    var foreground by mutableStateOf(true)
+
+    /** Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. */
+    fun releaseIdleAudio(): Int = listOf(a, b).count { it.releaseAudio() }
+
     fun deck(id: DeckId): DeckController = if (id == DeckId.A) a else b
     private fun other(id: DeckId): DeckController = if (id == DeckId.A) b else a
 
@@ -220,8 +255,8 @@ class DjController(private val mixer: DjMixer) {
         deck(id).syncOn || locked || (deck(id).bpm != null && other(id).bpm != null)
 
     /** Carrega a faixa no deck (só pausado); qualquer encaixe de batidas anterior se desfaz. */
-    fun loadTrack(id: DeckId, track: Track): Boolean {
-        if (!deck(id).load(track)) return false
+    fun loadTrack(id: DeckId, track: Track, source: LibraryEntry? = null): Boolean {
+        if (!deck(id).load(track, source)) return false
         phaseLocked = false
         return true
     }

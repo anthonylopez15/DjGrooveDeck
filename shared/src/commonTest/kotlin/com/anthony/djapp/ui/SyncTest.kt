@@ -197,4 +197,39 @@ class SyncTest {
         assertNotNull(r.c.b.bpm)
         assertEquals(124.0, r.c.b.bpm!!, 1e-9)
     }
+
+    @Test
+    fun releasedAudioKeepsDeckStateAndReloads() {
+        val r = Rig()
+        val entry = LibraryEntry("t\nA", "A", false, 1L)
+        assertTrue(r.c.loadTrack(DeckId.A, track("A", 126.0, 0.10), entry))
+        assertTrue(r.c.loadTrack(DeckId.B, track("B", 122.0, 0.30), LibraryEntry("t\nB", "B", false, 2L)))
+        r.c.toggleSync(DeckId.B)
+        r.c.deck(DeckId.A).seek(0.5f)
+        r.c.deck(DeckId.A).changeTempo(3f)
+        r.settle()
+        val pos = r.c.deck(DeckId.A).positionSec
+        assertEquals(2, r.c.releaseIdleAudio())
+        val a = r.c.deck(DeckId.A)
+        assertTrue(a.audioReleased)
+        assertTrue(a.hasTrack)
+        assertEquals(pos, a.positionSec)
+        assertEquals(3f, a.tempoPercent)
+        assertTrue(r.c.deck(DeckId.B).syncOn)
+        a.togglePlay()
+        assertFalse(a.playingNow, "sem áudio não toca")
+        assertTrue(a.restoreAudio(track("A", 126.0, 0.10)))
+        assertFalse(a.audioReleased)
+        a.togglePlay()
+        assertTrue(a.playingNow)
+    }
+
+    @Test
+    fun playingDeckAndUnknownSourceAreNotReleased() {
+        val r = Rig()
+        r.c.loadTrack(DeckId.A, track("A", 126.0, 0.1), LibraryEntry("t\nA", "A", false, 1L))
+        r.c.loadTrack(DeckId.B, track("B", 122.0, 0.3)) // sem origem: não dá para recarregar
+        r.c.togglePlay(DeckId.A)
+        assertEquals(0, r.c.releaseIdleAudio())
+    }
 }

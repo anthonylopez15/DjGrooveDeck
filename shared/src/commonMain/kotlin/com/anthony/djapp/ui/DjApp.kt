@@ -87,6 +87,25 @@ fun DjApp(controller: DjController, library: Library) {
     val loadingEntries = remember { mutableStateMapOf<String, DeckId>() }
     val scope = rememberCoroutineScope()
 
+    // com o áudio solto por falta de memória em segundo plano, recarrega do arquivo ao voltar à tela
+    for (id in DeckId.entries) {
+        val deck = controller.deck(id)
+        val entry = deck.source
+        LaunchedEffect(deck.audioReleased, controller.foreground) {
+            if (!deck.audioReleased || !controller.foreground || entry == null || deck.loading) return@LaunchedEffect
+            deck.startLoading(entry.name)
+            try {
+                deck.restoreAudio(library.decode(entry, deck::updateLoadProgress))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                notice = "Não consegui recarregar ${entry.name}: ${e.message}"
+            } finally {
+                if (deck.loadingName == entry.name) deck.cancelLoading()
+            }
+        }
+    }
+
     // aviso curto no topo; some sozinho
     LaunchedEffect(notice) {
         if (notice != null) {
@@ -135,7 +154,7 @@ fun DjApp(controller: DjController, library: Library) {
                             deck.startLoading(entry.name)
                             loadingEntries[entry.id] = deckId
                             try {
-                                val loaded = controller.loadTrack(deckId, library.decode(entry, deck::updateLoadProgress))
+                                val loaded = controller.loadTrack(deckId, library.decode(entry, deck::updateLoadProgress), entry)
                                 if (!loaded) { // o deck começou a tocar durante a decodificação
                                     deck.cancelLoading()
                                     status = mustPauseMessage(deckId)

@@ -64,7 +64,27 @@ class Deck(private val outRate: Int) {
     }
 
     fun play() {
-        if (track != null) playing = true
+        val t = track
+        if (t != null && !t.released) playing = true
+    }
+
+    /**
+     * Solta o áudio da faixa (só pausado), guardando posição, tempo, EQ etc.; [restoreAudio] devolve.
+     * Devolve false se o deck toca ou não há áudio a soltar.
+     */
+    fun releaseAudio(): Boolean {
+        val t = track ?: return false
+        if (playing || t.released) return false
+        track = t.releasedCopy() // o stretcher solta a referência antiga na thread de áudio (render)
+        return true
+    }
+
+    /** Devolve o áudio de uma faixa liberada (mesma música, mesmo tamanho). false se não cabe. */
+    fun restoreAudio(pcm: ShortArray): Boolean {
+        val t = track ?: return false
+        if (!t.released || pcm.size / 2 != t.frames) return false
+        track = t.withPcm(pcm)
+        return true
     }
 
     fun pause() {
@@ -118,6 +138,12 @@ class Deck(private val outRate: Int) {
         val t = track
         val target = volume * mixGain
         if (t == null || !playing) {
+            // faixa liberada: o stretcher não pode continuar segurando o PCM antigo
+            if (t != null && t.released && stretchSource != null && stretchSource !== t) {
+                stretcher.setSource(ShortArray(0))
+                stretchSource = null
+                stretchActive = false
+            }
             if (seekRef === appliedSeek) positionFrames = pos
             lastGain = target
             level *= 0.8f

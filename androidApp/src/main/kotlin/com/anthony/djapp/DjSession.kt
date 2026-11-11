@@ -1,6 +1,8 @@
 package com.anthony.djapp
 
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.res.Configuration
 import com.anthony.djapp.engine.AndroidAudioOutput
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.ui.DjController
@@ -17,6 +19,23 @@ object DjSession {
         val output = AndroidAudioOutput(context)
         val mixer = DjMixer(output.sampleRate)
         val controller = DjController(mixer)
+
+        init {
+            // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
+            // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
+            context.registerComponentCallbacks(object : ComponentCallbacks2 {
+                override fun onTrimMemory(level: Int) {
+                    if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND && !activityVisible) {
+                        controller.releaseIdleAudio()
+                    }
+                }
+
+                override fun onConfigurationChanged(newConfig: Configuration) = Unit
+                override fun onLowMemory() {
+                    if (!activityVisible) controller.releaseIdleAudio()
+                }
+            })
+        }
 
         /** Algum deck tocando agora (estado real do motor). */
         val anyPlaying: Boolean get() = mixer.deckA.playing || mixer.deckB.playing
