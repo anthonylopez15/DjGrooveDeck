@@ -27,7 +27,7 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 | `Library.kt` | Contrato `Library` e `EmptyLibrary`. |
 | `SessionSnapshot.kt` | Estado da sessão para guardar em disco (`DeckSnapshot`, `encode`/`decode`). |
 
-O layout foi pensado para o celular **em pé**. Deitado, os pratos somem e o mixer fica espremido (ver roadmap).
+A tela é **travada em retrato** (`android:screenOrientation="portrait"` no manifest): o layout foi pensado para o celular em pé; deitado, os pratos sumiam e o mixer ficava espremido.
 
 ## Ondas
 
