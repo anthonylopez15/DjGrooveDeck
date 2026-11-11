@@ -8,7 +8,10 @@ interface AudioOutput {
     /** Taxa nativa do dispositivo; o [DjMixer] deve ser criado com ela. */
     val sampleRate: Int
 
-    /** Começa a puxar áudio de [mixer] numa thread própria. */
+    /** A thread de áudio está ligada (entre [start] e [stop]). */
+    val running: Boolean
+
+    /** Começa a puxar áudio de [mixer] numa thread própria. Sem efeito se já está rodando. */
     fun start(mixer: DjMixer)
 
     fun stop()

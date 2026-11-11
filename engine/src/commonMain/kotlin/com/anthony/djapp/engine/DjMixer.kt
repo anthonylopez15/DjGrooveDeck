@@ -58,6 +58,12 @@ class DjMixer(val sampleRate: Int) {
         if (r.startFollower) r.follower.play()
     }
 
+    /** Solta o PCM de faixas liberadas que o key lock ainda segurava; só com a thread de áudio parada. */
+    fun dropStaleAudio() {
+        deckA.dropStaleStretchSource()
+        deckB.dropStaleStretchSource()
+    }
+
     /** Preenche [out] com [frames] frames estéreo intercalados (tamanho >= frames*2). */
     fun render(out: FloatArray, frames: Int) {
         val align = pendingAlign

@@ -15,10 +15,12 @@ Manifest: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIF
 ## Ciclo de vida e segundo plano
 
 ```
-onStart / onResume   activityVisible = true, controller.foreground = true, output.start()
+onStart / onResume   activityVisible = true, controller.foreground = true
 onUserLeaveHint      (início/recentes) se tocando: activityVisible = false e inicia o serviço
-onStop               foreground = false; se tocando inicia o serviço, senão output.stop()
+onStop               foreground = false, salva; se tocando inicia o serviço, senão output.stop()
 ```
+
+**Saída de áudio só quando precisa**: a tela não abre a saída. O play (`DjController.playbackGate`) pede o foco e liga a saída; com os dois decks parados por **5 s** (tela à vista), um vigia na `DjSession` a desliga. Com a saída aberta o sistema considera o app tocando (silêncio) e gasta bateria. O primeiro play depois disso abre o `AudioTrack` de novo (alguns ms). Log: `saída aberta` / `saída fechada` na tag `DjAudio`.
 
 - `onUserLeaveHint` é o momento em que o Android ainda permite iniciar o serviço sem restrição; `onStop` fica de reserva (por exemplo, tela desligando).
 - **Serviço**: a cada 400 ms um *watcher* checa: se a tela voltou, o serviço se encerra mantendo o áudio; se nada toca, encerra e desliga a saída. `lastStartId` garante que `stopSelf(id)` não seja ignorado quando chega um novo start. Remover o app dos recentes (`onTaskRemoved`) para tudo.
@@ -33,7 +35,6 @@ onStop               foreground = false; se tocando inicia o serviço, senão ou
 - **Som de notificação** (perda breve com volume baixo): o próprio Android abaixa o volume e devolve; o app não faz nada.
 - Em Android 14+ o sistema faz um *fade* de ~2 s no app que perde o foco antes de avisá-lo; por isso o set ainda soa um instante depois de o outro app começar.
 - Verificado no aparelho: com um deck tocando, abrir uma música no YouTube Music tomou o foco e o set pausou. Não verificado: ligação real.
-- Detalhe conhecido: com a tela à vista a saída de áudio fica aberta (tocando silêncio com os decks pausados), então o sistema considera o app "tocando mídia" mesmo parado. Não atrapalha o foco, mas aparece em diagnósticos como o do Fast Pair.
 
 ## Troca de saída de áudio (fone, Bluetooth)
 
@@ -58,6 +59,7 @@ Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desco
 Duas faixas de 5 min ocupam ~110 MB de PCM. Em segundo plano isso é um bom motivo para o Android matar o processo.
 
 - `DjSession` registra um `ComponentCallbacks2`. Com `onTrimMemory(level ≥ TRIM_MEMORY_BACKGROUND)` ou `onLowMemory`, **e a tela fora de vista**, chama `controller.releaseIdleAudio()`.
+- Com a thread de áudio parada (saída fechada), a sessão também chama `mixer.dropStaleAudio()`: sem isso, o PCM de uma faixa tocada com key lock continuaria preso no stretcher.
 - Só decks **parados** e com **origem conhecida** (`LibraryEntry`) soltam o PCM. Ficam: origem, posição, tempo, EQ, volume, SYNC, onda e grade.
 - Ao voltar à tela (`controller.foreground = true`), `DjApp` recarrega o arquivo de cada deck liberado, mostrando o efeito de carregamento, e chama `restoreAudio`. O play fica inativo enquanto não há áudio.
 - Falha ao recarregar (arquivo removido): aviso na tela; o deck fica sem áudio até outra faixa ser carregada.

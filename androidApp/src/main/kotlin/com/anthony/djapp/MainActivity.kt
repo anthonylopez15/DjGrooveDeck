@@ -34,15 +34,13 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         DjSession.activityVisible = true
         session.controller.foreground = true
-        session.output.start(session.mixer) // já rodando se a música seguiu tocando em segundo plano
     }
 
     override fun onResume() {
         super.onResume()
-        // voltar dos recentes sem que a tela tenha parado (sem onStart): a tela está de novo à vista
-        // e a saída de áudio precisa estar ligada, senão o próximo play ficaria mudo
+        // voltar dos recentes sem que a tela tenha parado (sem onStart): a tela está de novo à vista.
+        // A saída de áudio não é ligada aqui: o play a liga (DjController.playbackGate).
         DjSession.activityVisible = true
-        session.output.start(session.mixer)
     }
 
     /**

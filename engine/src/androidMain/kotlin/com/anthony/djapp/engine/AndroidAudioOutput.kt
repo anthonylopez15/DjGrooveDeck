@@ -29,7 +29,9 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
         @Volatile var alive = true
     }
 
-    private var worker: Worker? = null
+    @Volatile private var worker: Worker? = null
+
+    override val running: Boolean get() = worker != null
     private var thread: Thread? = null
 
     private fun createTrack(chunkFrames: Int): AudioTrack {
@@ -134,5 +136,6 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
         worker = null
         thread?.join(500)
         thread = null
+        Log.i(TAG, "saída fechada")
     }
 }

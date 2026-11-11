@@ -14,7 +14,7 @@ Pacote `com.anthony.djapp.engine`. Kotlin puro em `commonMain`; só a saída de 
 | `WsolaStretcher.kt` | Time-stretch para o key lock. |
 | `BpmDetector.kt` | BPM e grade de batidas. |
 | `TrackInfo.kt` | Duração + BPM para listas. |
-| `AudioOutput.kt` | Interface da saída de áudio. |
+| `AudioOutput.kt` | Interface da saída de áudio (`start`, `stop`, `running`). |
 | `androidMain/AndroidAudioOutput.kt` | `AudioTrack` float, baixa latência. |
 | `androidMain/AndroidTrackDecoder.kt` | Decodificação via `MediaCodec`. |
 | `iosMain/IosAudioOutput.kt` | Placeholder (nunca compilado). |
@@ -38,7 +38,7 @@ Campos públicos (todos `@Volatile`, escritos pela UI, lidos pela thread de áud
 **Regras**
 - `load(t)` devolve `false` se o deck está tocando (a faixa não troca com o deck tocando).
 - `play()` não toca uma faixa liberada.
-- `releaseAudio()` / `restoreAudio(pcm)`: solta/devolve o PCM de um deck parado; posição, tempo, EQ etc. ficam. O stretcher solta a referência antiga na própria thread de áudio.
+- `releaseAudio()` / `restoreAudio(pcm)`: solta/devolve o PCM de um deck parado; posição, tempo, EQ etc. ficam. O stretcher solta a referência antiga na própria thread de áudio; com ela parada, quem chama é `DjMixer.dropStaleAudio()` (`Deck.dropStaleStretchSource`).
 
 **Leitura**
 - Sem key lock: resample linear, com `readStep = taxaFaixa/taxaSaída × tempo` (velocidade e tom mudam juntos, como toca-discos).

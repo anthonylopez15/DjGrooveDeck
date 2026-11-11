@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (63 testes)
+## Suítes (64 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -19,7 +19,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `KeyLockQualityTest` | Afinação preservada em tempos 0,97/1,03 (regressão do erro de ~52 centésimos). |
 | `BpmDetectorTest` | BPM e fase em faixas sintéticas, oitava 80–160, rejeição de tom puro/ruído/faixa curta. |
 | `MixerAlignTest` | Alinhamento na thread de áudio, largada quantizada, fusão de pedidos. |
-| `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio. |
+| `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio, faixa com key lock liberada com a thread parada. |
 | `EngineStressTest` | Carga: operações aleatórias reproduzíveis (semente fixa) por ~46 s de áudio e muitas buscas com key lock. |
 | `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller. |
 | `SessionRestoreTest` (`shared`) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
@@ -52,6 +52,7 @@ Roteiros já executados com sucesso:
 - Notificação e ação Pausar; remoção dos recentes.
 - Pedido de memória em segundo plano e recarga ao voltar.
 - Foco de áudio: com um deck tocando, `adb shell am start -a android.intent.action.VIEW -d content://media/external/audio/media/<id> -t audio/mpeg` abre a música em outro player, que toma o foco; o set deve pausar (`adb shell dumpsys audio | grep -A3 "Audio Focus stack"` mostra quem tem o foco).
+- Saída de áudio ociosa: `adb shell dumpsys audio | grep AudioPlaybackConfiguration` não mostra o app com ele aberto e parado; mostra ao tocar; some ~5 s depois de pausar.
 - Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.

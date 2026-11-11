@@ -7,6 +7,7 @@ package com.anthony.djapp.engine
  * num buffer pré-alocado dentro do render block.
  */
 class IosAudioOutput(override val sampleRate: Int = 48000) : AudioOutput {
+    override val running: Boolean = false
     override fun start(mixer: DjMixer) = Unit
     override fun stop() = Unit
 }

@@ -79,6 +79,19 @@ class Deck(private val outRate: Int) {
         return true
     }
 
+    /**
+     * Solta o PCM antigo que o stretcher ainda segura depois de [releaseAudio]. A thread de áudio faz
+     * isso sozinha no render; chamar diretamente só com ela parada ([AudioOutput.running] = false).
+     */
+    fun dropStaleStretchSource() {
+        val t = track
+        if (stretchSource != null && stretchSource !== t && (t == null || t.released)) {
+            stretcher.setSource(ShortArray(0))
+            stretchSource = null
+            stretchActive = false
+        }
+    }
+
     /** Devolve o áudio de uma faixa liberada (mesma música, mesmo tamanho). false se não cabe. */
     fun restoreAudio(pcm: ShortArray): Boolean {
         val t = track ?: return false
@@ -138,12 +151,7 @@ class Deck(private val outRate: Int) {
         val t = track
         val target = volume * mixGain
         if (t == null || !playing) {
-            // faixa liberada: o stretcher não pode continuar segurando o PCM antigo
-            if (t != null && t.released && stretchSource != null && stretchSource !== t) {
-                stretcher.setSource(ShortArray(0))
-                stretchSource = null
-                stretchActive = false
-            }
+            if (t != null && t.released) dropStaleStretchSource()
             if (seekRef === appliedSeek) positionFrames = pos
             lastGain = target
             level *= 0.8f

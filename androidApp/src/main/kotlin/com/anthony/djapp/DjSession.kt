@@ -7,6 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.content.res.Configuration
 import com.anthony.djapp.engine.AndroidAudioOutput
 import com.anthony.djapp.engine.DjMixer
@@ -34,8 +37,6 @@ object DjSession {
             // processo novo: volta ao que estava (os decks são recarregados quando a tela aparece)
             SessionSnapshot.decode(prefs.getString(KEY_STATE, null))?.let(controller::restore)
 
-            // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
-            // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
             // Foco de áudio: pede antes de tocar; outro app ou uma ligação pausa o set
             val focus = AudioFocus(context) { transient ->
                 if (anyPlaying) {
@@ -44,9 +45,11 @@ object DjSession {
                         if (transient) "Música pausada (ligação ou outro áudio)" else "Música pausada: outro app começou a tocar"
                 }
             }
+            // Antes de tocar: pede o foco e liga a saída de áudio (que fica desligada com tudo parado)
             controller.playbackGate = {
                 focus.request().also { granted ->
-                    if (!granted) controller.systemNotice = "Não dá para tocar agora (ligação em andamento?)"
+                    if (granted) output.start(mixer)
+                    else controller.systemNotice = "Não dá para tocar agora (ligação em andamento?)"
                 }
             }
 
@@ -66,19 +69,54 @@ object DjSession {
                 context.registerReceiver(noisy, filter)
             }
 
+            // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
+            // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
             context.registerComponentCallbacks(object : ComponentCallbacks2 {
                 override fun onTrimMemory(level: Int) {
                     if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND && !activityVisible) {
                         save() // pedido de memória costuma vir antes de o processo ser encerrado
-                        controller.releaseIdleAudio()
+                        releaseIdleAudio()
                     }
                 }
 
                 override fun onConfigurationChanged(newConfig: Configuration) = Unit
                 override fun onLowMemory() {
-                    if (!activityVisible) controller.releaseIdleAudio()
+                    if (!activityVisible) releaseIdleAudio()
                 }
             })
+        }
+
+        private fun releaseIdleAudio() {
+            controller.releaseIdleAudio()
+            // com a thread de áudio parada ninguém mais solta o PCM que o key lock segurava: solta aqui
+            if (!output.running) mixer.dropStaleAudio()
+        }
+
+        private val handler = Handler(Looper.getMainLooper())
+        private var idleSince = 0L
+
+        /**
+         * Desliga a saída de áudio depois de [IDLE_STOP_MS] com os dois decks parados: com ela aberta o
+         * sistema considera o app tocando (tocando silêncio) e gasta bateria. O próximo play religa.
+         * Fora da tela quem cuida disso é a Activity/o serviço (desligam na hora, sem música).
+         */
+        private val idleWatcher = object : Runnable {
+            override fun run() {
+                val now = SystemClock.elapsedRealtime()
+                when {
+                    anyPlaying || !output.running -> idleSince = 0L
+                    idleSince == 0L -> idleSince = now
+                    now - idleSince >= IDLE_STOP_MS -> {
+                        output.stop()
+                        idleSince = 0L
+                    }
+                }
+                handler.postDelayed(this, IDLE_CHECK_MS)
+            }
+        }
+
+        init {
+            handler.postDelayed(idleWatcher, IDLE_CHECK_MS)
         }
 
         /** Algum deck tocando agora (estado real do motor). */
@@ -98,6 +136,8 @@ object DjSession {
     }
 
     private const val KEY_STATE = "state"
+    private const val IDLE_STOP_MS = 5_000L
+    private const val IDLE_CHECK_MS = 1_000L
 
     @Volatile private var session: Session? = null
 

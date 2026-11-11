@@ -78,4 +78,25 @@ class ReleaseAudioTest {
         deck.renderAdd(out, 512, 1f)
         assertTrue(out.all { !it.isNaN() })
     }
+
+    @Test
+    fun keyLockedTrackReleasedWhileAudioThreadIsStoppedStillRestores() {
+        // tocou com key lock (o stretcher passa a segurar o PCM), a thread de áudio parou, a faixa foi
+        // liberada: soltar a referência à parte não pode quebrar a volta do áudio
+        val deck = Deck(rate)
+        deck.keyLock = true
+        deck.tempo = 1.04
+        deck.load(track())
+        deck.play()
+        val out = FloatArray(1024)
+        repeat(4) { deck.renderAdd(out, 512, 1f) }
+        deck.pause()
+        assertTrue(deck.releaseAudio())
+        deck.dropStaleStretchSource()
+        assertTrue(deck.restoreAudio(pcm(4)))
+        deck.play()
+        out.fill(0f)
+        repeat(4) { deck.renderAdd(out, 512, 1f) }
+        assertTrue(out.any { it != 0f } && out.all { !it.isNaN() })
+    }
 }
