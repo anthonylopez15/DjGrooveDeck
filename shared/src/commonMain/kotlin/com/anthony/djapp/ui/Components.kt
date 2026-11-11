@@ -269,8 +269,10 @@ fun Knob(
                 cap = StrokeCap.Round,
             )
         }
-        val shown = if (dragging) readout(value) else ""
-        Text(shown.ifEmpty { label }, fontSize = 11.sp, color = if (dragging && shown.isNotEmpty()) color else Idle)
+        // porcentagem enquanto arrasta e enquanto o valor não estiver em 0%; senão, o rótulo
+        val text = readout(value)
+        val showReadout = text.isNotEmpty() && (dragging || text != "0%")
+        Text(if (showReadout) text else label, fontSize = 11.sp, color = if (showReadout) color else Idle)
     }
 }
 

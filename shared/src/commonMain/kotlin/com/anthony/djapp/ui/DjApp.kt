@@ -379,12 +379,13 @@ private fun MixerPane(controller: DjController, modifier: Modifier = Modifier) {
 private fun VolumeFader(deck: DeckController, color: Color) {
     var dragging by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxHeight()) {
-        // enquanto o dedo está no fader, mostra a porcentagem escolhida
+        // mostra a porcentagem enquanto o dedo está no fader e enquanto o volume não for 0
+        val showPercent = dragging || formatPercent(deck.volume) != "0%"
         Text(
-            if (dragging) formatPercent(deck.volume) else "VOL",
+            if (showPercent) formatPercent(deck.volume) else "VOL",
             fontSize = 11.sp,
-            color = if (dragging) color else Idle,
-            fontWeight = if (dragging) FontWeight.Bold else FontWeight.Normal,
+            color = if (showPercent) color else Idle,
+            fontWeight = if (showPercent) FontWeight.Bold else FontWeight.Normal,
         )
         VerticalFader(
             value = deck.volume,
