@@ -422,28 +422,28 @@ private fun TabBar(selected: Tab, keyLock: Boolean, onToggleKey: () -> Unit, onS
         horizontalArrangement = Arrangement.Center,
     ) {
         Tab.entries.forEach { t ->
-            Text(
-                t.label,
-                textAlign = TextAlign.Center,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (t == selected) Color(0xFF3B82F6) else Idle,
-                modifier = Modifier
-                    .clickable { onSelect(t) }
-                    .padding(horizontal = 28.dp, vertical = 10.dp),
-            )
+            val c = if (t == selected) Color(0xFF3B82F6) else Idle
+            TabItem(t.label, c, if (t == Tab.Waves) TabIconKind.Waves else TabIconKind.Mixer, 28.dp) { onSelect(t) }
         }
-        // KEY: mantém o tom ao mudar o andamento (tempo e SYNC)
-        Text(
+        // KEY: mantém o tom ao mudar o andamento (tempo e SYNC); cadeado fechado = ligado
+        TabItem(
             "KEY",
-            textAlign = TextAlign.Center,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (keyLock) Color(0xFF3B82F6) else Idle,
-            modifier = Modifier
-                .clickable(onClick = onToggleKey)
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+            if (keyLock) Color(0xFF3B82F6) else Idle,
+            if (keyLock) TabIconKind.KeyLock else TabIconKind.KeyUnlock,
+            20.dp,
+            onToggleKey,
         )
+    }
+}
+
+@Composable
+private fun TabItem(label: String, color: Color, icon: TabIconKind, hPad: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick).padding(horizontal = hPad, vertical = 6.dp),
+    ) {
+        TabIcon(icon, color)
+        Text(label, textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
 
