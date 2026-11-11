@@ -1,6 +1,6 @@
-# DjAppKmp
+# GrooveDeck DJ
 
-App de DJ (2 decks) em Kotlin Multiplatform + Compose Multiplatform. Android primeiro; iOS depois.
+GrooveDeck DJ é um app de DJ (2 decks) em Kotlin Multiplatform + Compose Multiplatform. Android primeiro; iOS depois.
 
 ## Módulos
 
@@ -11,6 +11,18 @@ App de DJ (2 decks) em Kotlin Multiplatform + Compose Multiplatform. Android pri
 | `androidApp` | `MainActivity`: seletor de arquivos + liga motor e UI. |
 
 Fluxo de áudio: `AudioOutput` (thread de áudio) → `DjMixer.render()` → `Deck.renderAdd()` (resample linear + EQ + ganho) → soma com crossfader → master + soft clip.
+
+## Documentação
+
+| Documento | Conteúdo |
+|---|---|
+| [docs/GUIA-DE-USO.md](docs/GUIA-DE-USO.md) | Como usar o app |
+| [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | Módulos, fluxo de áudio e de estado, decisões |
+| [docs/MOTOR.md](docs/MOTOR.md) | Deck, mixer, EQ, key lock (WSOLA), BPM, saída Android |
+| [docs/UI.md](docs/UI.md) | Telas, componentes, regras e modelo do SYNC |
+| [docs/ANDROID.md](docs/ANDROID.md) | Ciclo de vida, serviço, biblioteca, memória |
+| [docs/TESTES.md](docs/TESTES.md) | Suítes, teste de carga, verificação no aparelho |
+| [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md) | Setup, convenções, armadilhas, roadmap, portar para iOS |
 
 ## Comandos
 

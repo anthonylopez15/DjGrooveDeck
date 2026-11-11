@@ -116,7 +116,7 @@ class PlaybackService : Service() {
         )
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle("DJ App")
+            .setContentTitle("GrooveDeck DJ")
             .setContentText("Música tocando · toque para abrir")
             .setContentIntent(open)
             .setOngoing(true)

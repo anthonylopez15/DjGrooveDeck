@@ -1,0 +1,54 @@
+# Interface (`shared`)
+
+Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
+
+## Telas
+
+- **ONDAS**: dois pratos (deck A e B) em cima; embaixo, a onda ampliada dos dois decks.
+- **MIXER**: ondas menores em cima; embaixo EQ (Low/Mid/High), fader de volume por deck, medidores, crossfader, master.
+- **Biblioteca**: abre ao tocar no botão ♫ de um deck. Lista pastas/arquivos, com BPM e duração por linha.
+- Barra inferior: abas ONDAS / MIXER e botão **KEY** (key lock global); abaixo, o transporte (play, voltar ao início, SYNC por deck) e o crossfader.
+
+## Componentes
+
+| Arquivo | Conteúdo |
+|---|---|
+| `DjApp.kt` | Raiz: tema, abas, biblioteca, recarga de faixas liberadas, avisos. |
+| `DjController.kt` | `DeckController`, `DjController`, `DeckId`, `SyncState`. |
+| `Components.kt` | `Platter`, `VerticalFader` (com marcas), `Knob`, `LevelMeter`, `SyncButton`, `PlayButton`, `RestartButton`. |
+| `Waveform.kt` | `OverviewWaveform` e `ScrollingWaveform`. |
+| `LibraryBrowser.kt` | Lista com preenchimento de carregamento por linha. |
+| `Library.kt` | Contrato `Library` e `EmptyLibrary`. |
+
+## Ondas
+
+- **Visão geral** (`OverviewWaveform`): barras desenhadas uma só vez em dois bitmaps (esmaecido e aceso) via `drawWithCache`; a cada quadro só se recorta o aceso até a posição atual. Tocar ou arrastar busca.
+- **Ampliada** (`ScrollingWaveform`): ~6 s sob um marcador fixo no centro, colorida por frequência (grave vermelho, agudo azul), com linhas de batida (laranja a cada 4 = compasso). Arrastar move a posição.
+
+## Regras de uso
+
+- **Não troca a faixa com o deck tocando.** Tocar em ♫ ou numa faixa com o deck em play mostra "Pause o deck X para trocar a faixa".
+- Carregar mostra um preenchimento da esquerda para a direita sobre a linha da faixa e no deck.
+- Adicionar pasta com música tocando não interrompe o áudio.
+
+## SYNC (modelo djay)
+
+Estado por deck: `syncOn`. Estado do par: `phaseLocked` (batidas alinhadas), `locked` (derivado: `phaseLocked` + os dois tocando + algum `syncOn`). O botão tem três aparências (`SyncState`): **Off**, **Armed** (contorno) e **Locked** (cheio).
+
+| Ação | Efeito |
+|---|---|
+| Ligar SYNC num deck | Passa a seguir o BPM do outro (limite ±16%). Se já toca, iguala o andamento; com o outro tocando, alinha as batidas e trava. Parado, espera o play. |
+| Play num deck com SYNC e o outro tocando | Largada quantizada: iguala o andamento e começa na batida certa (alinhamento feito na thread de áudio). |
+| Desligar o SYNC do seguidor | Volta ao tempo que tinha antes de sincronizar. |
+| Tocar no botão do **líder** com tudo travado | Desfaz o vínculo; cada deck fica no andamento em que está. |
+| Pausar, trocar de faixa | Desfaz o encaixe (o SYNC continua ligado, sem travar). |
+| Voltar ao início com SYNC | Cai de novo na batida certa. |
+
+Detalhes:
+- Só trava quando os **BPM efetivos** (BPM × tempo) já são iguais (`bpmMatched`, tolerância 0,05). Com o ajuste limitado a ±16%, andamentos muito distantes não casam e não aparecem "travados". O número de BPM fica azul quando casa.
+- Sem BPM detectado em algum dos decks, o SYNC não liga.
+- O key lock impede que acelerar/frear mude o tom.
+
+## Acoplamento com o motor
+
+`DeckController.engineDeck` é `internal` e só o `DjController` o usa (para pedir o alinhamento ao mixer). A UI não toca no motor diretamente.
