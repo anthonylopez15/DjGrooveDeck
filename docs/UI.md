@@ -13,13 +13,21 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `DjApp.kt` | Raiz: tema, abas, biblioteca, recarga de faixas liberadas, avisos. |
+| `DjApp.kt` | Raiz: estado da tela (aba, biblioteca aberta, avisos) e montagem das partes. |
+| `Theme.kt` | Cores dos decks e tema escuro (`DjColors`, `deckColor`). |
+| `DeckHeader.kt` | Cabeçalho: aviso do topo, nome/tempo/BPM de cada deck, botão ♫ e visão geral da onda. |
+| `DecksPane.kt` | Aba ONDAS: pratos com SYNC e ondas ampliadas. |
+| `MixerPane.kt` | Aba MIXER: volume, EQ, medidores e master. |
+| `BottomBar.kt` | Abas com ícones (ONDAS, MIXER, KEY) e transporte com o crossfader. |
+| `TrackLoading.kt` | Carregar faixa da biblioteca; recarregar do arquivo faixas liberadas ou restauradas. |
 | `DjController.kt` | `DeckController`, `DjController`, `DeckId`, `SyncState`. |
-| `Components.kt` | `Platter`, `VerticalFader` (com marcas), `Knob`, `LevelMeter`, `SyncButton`, `PlayButton`, `RestartButton`. |
+| `Components.kt` | `Platter`, `VerticalFader` (com marcas), `Knob`, `LevelMeter`, `SyncButton`, `PlayButton`, `RestartButton`, `TabIcon`, formatação. |
 | `Waveform.kt` | `OverviewWaveform` e `ScrollingWaveform`. |
 | `LibraryBrowser.kt` | Lista com preenchimento de carregamento por linha. |
 | `Library.kt` | Contrato `Library` e `EmptyLibrary`. |
 | `SessionSnapshot.kt` | Estado da sessão para guardar em disco (`DeckSnapshot`, `encode`/`decode`). |
+
+O layout foi pensado para o celular **em pé**. Deitado, os pratos somem e o mixer fica espremido (ver roadmap).
 
 ## Ondas
 

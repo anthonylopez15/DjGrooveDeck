@@ -46,6 +46,7 @@ adb shell am start -n com.anthony.djapp/.MainActivity
 ## Roadmap
 
 Ainda não existe:
+- Layout para o celular deitado (paisagem): hoje os pratos somem e o mixer fica espremido; travar em retrato ou criar um layout próprio.
 - Loops, hotcues, efeitos, histórico de faixas, knobs de filtro e gain.
 - Latência mínima: migrar `AudioTrack` → Oboe (C++/NDK) se a latência incomodar.
 - **iOS**: só placeholders (`IosAudioOutput`, `MainViewController`), nunca compilados. Precisa de Mac/Xcode, `AVAudioEngine` (source node) e uma biblioteca de arquivos (`Library`) para iOS.
