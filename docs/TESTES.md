@@ -54,4 +54,4 @@ Roteiros já executados com sucesso:
 
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.
 
-Não verificado: fone com fio/USB, o caminho de recriação do `AudioTrack` após `DEAD_OBJECT` (não aconteceu nos testes) e o erro de memória com arquivos gigantes (só compilado).
+Não verificado: fone USB-C (o aparelho de teste não tem entrada P2), o caminho de recriação do `AudioTrack` após `DEAD_OBJECT` (não aconteceu nos testes) e o erro de memória com arquivos gigantes (só compilado).
