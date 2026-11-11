@@ -13,7 +13,12 @@ import java.nio.ByteOrder
 /** Decodifica qualquer áudio suportado pelo Android (MP3, AAC, FLAC, WAV, OGG...) para [Track]. */
 object AndroidTrackDecoder {
 
-    suspend fun decode(context: Context, uri: Uri): Track = withContext(Dispatchers.Default) {
+    /** [onProgress] recebe 0..1 conforme a decodificação avança (chamado fora da thread principal). */
+    suspend fun decode(
+        context: Context,
+        uri: Uri,
+        onProgress: (Float) -> Unit = {},
+    ): Track = withContext(Dispatchers.Default) {
         val name = displayName(context, uri)
         val extractor = MediaExtractor()
         extractor.setDataSource(context, uri, null)
@@ -24,6 +29,10 @@ object AndroidTrackDecoder {
             extractor.selectTrack(trackIndex)
             val inFormat = extractor.getTrackFormat(trackIndex)
             val mime = inFormat.getString(MediaFormat.KEY_MIME)!!
+
+            val durationUs =
+                if (inFormat.containsKey(MediaFormat.KEY_DURATION)) inFormat.getLong(MediaFormat.KEY_DURATION) else 0L
+            var lastPct = -1
 
             var sampleRate = inFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = inFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
@@ -48,7 +57,15 @@ object AndroidTrackDecoder {
                                 codec.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                                 inputDone = true
                             } else {
-                                codec.queueInputBuffer(inIdx, 0, size, extractor.sampleTime, 0)
+                                val st = extractor.sampleTime
+                                codec.queueInputBuffer(inIdx, 0, size, st, 0)
+                                if (durationUs > 0) {
+                                    val pct = ((st * 100) / durationUs).toInt().coerceIn(0, 99)
+                                    if (pct != lastPct) {
+                                        lastPct = pct
+                                        onProgress(pct / 100f)
+                                    }
+                                }
                                 extractor.advance()
                             }
                         }
@@ -77,6 +94,7 @@ object AndroidTrackDecoder {
                 codec.stop()
                 codec.release()
             }
+            onProgress(1f)
             Track(name, sampleRate, out.toArray())
         } finally {
             extractor.release()

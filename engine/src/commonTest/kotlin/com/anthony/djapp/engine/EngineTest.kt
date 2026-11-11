@@ -161,6 +161,32 @@ class EngineTest {
     }
 
     @Test
+    fun waveformDetailSeparatesBassFromTreble() {
+        val bass = sineTrack(60.0).detail
+        val treble = sineTrack(8000.0).detail
+        val mid = bass.size / 2
+        assertTrue(bass.bass[mid] > 0.8f, "60 Hz deve ser quase só grave: ${bass.bass[mid]}")
+        assertTrue(treble.bass[mid] < 0.2f, "8 kHz deve ter pouco grave: ${treble.bass[mid]}")
+        assertEquals(1f, bass.peak.max(), 1e-6f)
+        assertEquals((48000 + 255) / 256, bass.size)
+    }
+
+    @Test
+    fun levelFollowsSignalAndDecaysWhenPaused() {
+        val deck = Deck(48000)
+        deck.load(sineTrack(440.0, amp = 0.5))
+        assertEquals(0f, deck.level, 0f)
+        deck.play()
+        val out = FloatArray(512 * 2)
+        repeat(4) { out.fill(0f); deck.renderAdd(out, 512, 1f) }
+        assertTrue(deck.level in 0.4f..0.55f, "pico de um seno 0,5 deve ficar perto de 0,5: ${deck.level}")
+
+        deck.pause()
+        repeat(30) { deck.renderAdd(out, 512, 1f) }
+        assertTrue(deck.level < 0.01f, "nível deve cair a ~0 em pausa: ${deck.level}")
+    }
+
+    @Test
     fun peaksAreNormalized() {
         val t = sineTrack(100.0, amp = 0.25)
         assertTrue(t.peaks.isNotEmpty())

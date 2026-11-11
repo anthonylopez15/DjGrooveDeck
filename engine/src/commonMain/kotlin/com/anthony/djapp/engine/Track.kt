@@ -1,7 +1,55 @@
 package com.anthony.djapp.engine
 
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
+
+/**
+ * Waveform de alta resolução para a visão ampliada: um "balde" a cada [framesPerBucket] frames.
+ * [peak] é a amplitude (0..1, normalizada) e [bass] a fração de energia abaixo de ~250 Hz (0..1),
+ * usada para colorir (grave = vermelho, agudo = azul).
+ */
+class WaveformDetail(val framesPerBucket: Int, val peak: FloatArray, val bass: FloatArray) {
+    val size: Int get() = peak.size
+
+    companion object {
+        const val FRAMES_PER_BUCKET = 256
+
+        fun compute(pcm: ShortArray, sampleRate: Int): WaveformDetail {
+            val frames = pcm.size / 2
+            val n = (frames + FRAMES_PER_BUCKET - 1) / FRAMES_PER_BUCKET
+            val peak = FloatArray(n)
+            val bass = FloatArray(n)
+            val a = 1.0 - exp(-2.0 * PI * 250.0 / sampleRate)
+            var lp = 0.0
+            var globalMax = 1f
+            for (b in 0 until n) {
+                val start = b * FRAMES_PER_BUCKET
+                val end = min(frames, start + FRAMES_PER_BUCKET)
+                var pk = 0
+                var eLow = 0.0
+                var eAll = 0.0
+                for (f in start until end) {
+                    val l = pcm[2 * f].toInt()
+                    val r = pcm[2 * f + 1].toInt()
+                    val m = (l + r) * 0.5
+                    lp += a * (m - lp)
+                    eLow += lp * lp
+                    eAll += m * m
+                    pk = max(pk, max(abs(l), abs(r)))
+                }
+                peak[b] = pk.toFloat()
+                if (pk > globalMax) globalMax = pk.toFloat()
+                bass[b] = if (eAll < 1.0) 0.5f else sqrt(eLow / eAll).coerceIn(0.0, 1.0).toFloat()
+            }
+            for (i in peak.indices) peak[i] /= globalMax
+            return WaveformDetail(FRAMES_PER_BUCKET, peak, bass)
+        }
+    }
+}
 
 /**
  * Faixa decodificada em memória: PCM 16 bits, estéreo intercalado (L,R,L,R...).
@@ -12,6 +60,7 @@ class Track(
     val sampleRate: Int,
     val pcm: ShortArray,
     val peaks: FloatArray = computePeaks(pcm),
+    val detail: WaveformDetail = WaveformDetail.compute(pcm, sampleRate),
 ) {
     init {
         require(pcm.size % 2 == 0) { "PCM deve ser estéreo intercalado" }

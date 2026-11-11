@@ -28,6 +28,10 @@ class Deck(private val outRate: Int) {
     private val eq = Eq3(outRate)
     private var lastGain = 0f
 
+    /** Pico recente (0..1) após EQ e ganho, com queda suave; alimenta o medidor de nível. */
+    @Volatile var level: Float = 0f
+        private set
+
     fun load(t: Track) {
         playing = false
         track = t
@@ -86,6 +90,7 @@ class Deck(private val outRate: Int) {
         if (t == null || !playing) {
             positionFrames = pos
             lastGain = target
+            level *= 0.8f
             return
         }
 
@@ -95,6 +100,7 @@ class Deck(private val outRate: Int) {
         val scale = 1f / 32768f
         val g0 = lastGain
         eq.update(lowDb, midDb, highDb)
+        var pk = 0f
 
         for (i in 0 until frames) {
             val idx = pos.toInt()
@@ -109,11 +115,18 @@ class Deck(private val outRate: Int) {
             val l = (l0 + (pcm[2 * idx + 2] - l0) * frac) * scale
             val r = (r0 + (pcm[2 * idx + 3] - r0) * frac) * scale
             val g = g0 + (target - g0) * ((i + 1).toFloat() / frames)
-            out[2 * i] += eq.processL(l) * g
-            out[2 * i + 1] += eq.processR(r) * g
+            val outL = eq.processL(l) * g
+            val outR = eq.processR(r) * g
+            out[2 * i] += outL
+            out[2 * i + 1] += outR
+            val aL = if (outL < 0f) -outL else outL
+            val aR = if (outR < 0f) -outR else outR
+            if (aL > pk) pk = aL
+            if (aR > pk) pk = aR
             pos += ratio
         }
 
+        level = maxOf(pk, level * 0.9f)
         lastGain = target
         positionFrames = pos
     }

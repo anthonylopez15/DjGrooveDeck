@@ -1,22 +1,35 @@
 package com.anthony.djapp.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-/** Visão geral da faixa; toque ou arraste para buscar. */
+private const val VISIBLE_SEC = 6.0
+private val BassColor = Color(0xFFEF4444)
+private val TrebleColor = Color(0xFF3B82F6)
+
+/** Visão geral da faixa inteira; toque ou arraste para buscar. [progress] é lido só no desenho. */
 @Composable
-fun Waveform(
+fun OverviewWaveform(
     peaks: FloatArray,
-    progress: Float,
+    progress: () -> Float,
     color: Color,
     onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
@@ -36,22 +49,78 @@ fun Waveform(
         val w = size.width
         val h = size.height
         val mid = h / 2f
+        val p = progress()
         if (peaks.isNotEmpty()) {
             val px = w.toInt().coerceAtLeast(1)
-            val played = Stroke(width = 1f)
             for (x in 0 until px) {
-                val p = peaks[(x.toLong() * peaks.size / px).toInt().coerceIn(0, peaks.size - 1)]
-                val half = (p * mid * 0.95f).coerceAtLeast(1f)
-                val isPlayed = x.toFloat() / px <= progress
+                val peak = peaks[(x.toLong() * peaks.size / px).toInt().coerceIn(0, peaks.size - 1)]
+                val half = (peak * mid * 0.95f).coerceAtLeast(1f)
                 drawLine(
-                    color = if (isPlayed) color else color.copy(alpha = 0.35f),
+                    color = if (x.toFloat() / px <= p) color else color.copy(alpha = 0.35f),
                     start = Offset(x.toFloat(), mid - half),
                     end = Offset(x.toFloat(), mid + half),
-                    strokeWidth = played.width,
+                    strokeWidth = 1f,
                 )
             }
         }
-        val px = progress * w
-        drawLine(Color.White, Offset(px, 0f), Offset(px, h), strokeWidth = 2f)
+        drawLine(Color.White, Offset(p * w, 0f), Offset(p * w, h), strokeWidth = 2f)
+    }
+}
+
+/**
+ * Onda ampliada (~6 s) que rola sob um marcador fixo no centro, colorida por frequência
+ * (grave = vermelho, agudo = azul). Arrastar na horizontal move a posição da faixa.
+ */
+@Composable
+fun ScrollingWaveform(
+    deck: DeckController,
+    color: Color,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.background(Color(0xFF0D1218))) {
+        val track = deck.track
+        Canvas(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(deck) {
+                    detectHorizontalDragGestures { _, dx ->
+                        deck.scrubBySeconds(-dx / size.width * VISIBLE_SEC)
+                    }
+                },
+        ) {
+            val w = size.width
+            val h = size.height
+            val mid = h / 2f
+            if (track != null) {
+                val d = track.detail
+                val bucketsPerSec = track.sampleRate.toDouble() / d.framesPerBucket
+                val center = deck.positionSec * bucketsPerSec
+                val visible = VISIBLE_SEC * bucketsPerSec
+                var x = 0f
+                while (x < w) {
+                    val b = (center + (x - w / 2f) / w * visible).toInt()
+                    if (b in 0 until d.size) {
+                        val half = (d.peak[b] * mid * 0.92f).coerceAtLeast(1f)
+                        val c = lerp(TrebleColor, BassColor, d.bass[b])
+                        drawLine(
+                            color = c.copy(alpha = if (x < w / 2f) 0.55f else 1f),
+                            start = Offset(x, mid - half),
+                            end = Offset(x, mid + half),
+                            strokeWidth = 3f,
+                        )
+                    }
+                    x += 3f
+                }
+            }
+            drawLine(Color(0xFFFF3B30), Offset(w / 2f, 0f), Offset(w / 2f, h), strokeWidth = 3f)
+        }
+        Text(
+            label,
+            color = color,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+        )
     }
 }
