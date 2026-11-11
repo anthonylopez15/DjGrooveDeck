@@ -60,4 +60,5 @@ Detalhes em [ANDROID.md](ANDROID.md).
 - **Motor em Kotlin puro** (sem NDK) para compartilhar com iOS e testar na JVM. O custo é a latência do `AudioTrack`; a migração para Oboe fica como plano (ver [DESENVOLVIMENTO.md](DESENVOLVIMENTO.md)).
 - **Alinhamento de batidas na thread de áudio**: medir posições na UI e aplicar depois deixaria 20–40 ms de erro entre os decks.
 - **Sessão no processo, não na Activity**: é isso que permite tocar em segundo plano e voltar com tudo como estava.
+- **Estado persistido em disco** (`SessionSnapshot`, texto `chave=valor`, sem biblioteca de serialização): se o processo for encerrado, a sessão volta com as faixas recarregadas dos arquivos.
 - **Liberação de PCM sob pressão de memória**: com o app em segundo plano, decks parados soltam o áudio e o recarregam do arquivo ao voltar (ver [ANDROID.md](ANDROID.md), "Memória").

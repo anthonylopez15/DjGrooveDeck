@@ -40,7 +40,16 @@ Duas faixas de 5 min ocupam ~110 MB de PCM. Em segundo plano isso é um bom moti
 - Falha ao recarregar (arquivo removido): aviso na tela; o deck fica sem áudio até outra faixa ser carregada.
 - Medido num aparelho real: 187 MB → 79 MB de PSS após o pedido de memória (heap Java 92 → 12 MB).
 
-Não coberto: se o sistema **matar o processo**, as faixas carregadas se perdem.
+## Estado após o processo ser encerrado
+
+Se o sistema encerrar o processo mesmo assim (pouca memória, app parado há muito tempo), a sessão volta como estava na próxima abertura:
+
+- `DjSession.Session.save()` grava `controller.snapshot().encode()` em `SharedPreferences("session")`, chave `state`. É chamado em `MainActivity.onStop`, em `pauseAll` (inclui a ação Pausar e o fim do serviço), em `onTrimMemory` e a cada ~5 s pelo *watcher* do serviço enquanto a música toca em segundo plano.
+- Guardado por deck (`DeckSnapshot`): origem (`LibraryEntry`), posição, tempo, tempo antes do SYNC, volume, EQ e SYNC. Da sessão: crossfader, master e key lock. O áudio não é guardado.
+- Ao nascer, a `Session` lê o estado e chama `controller.restore()`: o mixer volta na hora; cada deck fica com `pendingRestore` e a tela recarrega o arquivo assim que aparece (`applyRestore`), **pausado** e na mesma posição. A grade de batidas é recalculada da análise (mesmo resultado).
+- Escolher outra faixa antes de a recarga terminar cancela a restauração daquele deck. Se o arquivo não existir mais, aparece um aviso e o deck fica vazio.
+- Faixas sem origem conhecida não são guardadas. Texto corrompido ou de outra versão é ignorado.
+- Verificado no aparelho com `adb shell am kill`: as duas faixas, posição (0:06.0), volume (72%) e SYNC armado voltaram; o play com SYNC travou as batidas normalmente.
 
 ## Rótulos de nome
 

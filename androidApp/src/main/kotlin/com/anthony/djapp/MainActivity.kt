@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         DjSession.activityVisible = false
         session.controller.foreground = false
+        session.save()
         // Tocando: o serviço mantém o app vivo e o áudio ligado. Parado: desliga a saída de áudio.
         if (!session.anyPlaying || !PlaybackService.start(this)) session.output.stop()
         super.onStop()

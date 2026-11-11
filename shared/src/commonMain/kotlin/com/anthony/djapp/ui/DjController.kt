@@ -120,11 +120,63 @@ class DeckController(private val deck: Deck) {
     var audioReleased by mutableStateOf(false)
         private set
 
+    /**
+     * Faixa a recarregar do arquivo depois que o processo foi reiniciado (o app tinha sido encerrado
+     * pelo sistema); a tela recarrega e chama [applyRestore].
+     */
+    var pendingRestore by mutableStateOf<DeckSnapshot?>(null)
+        private set
+
+    /** Marca o deck para ser recarregado como estava em [snap]. */
+    fun scheduleRestore(snap: DeckSnapshot) {
+        if (track == null) pendingRestore = snap
+    }
+
+    /** Estado para guardar em disco; null se não há faixa com origem conhecida. */
+    fun snapshot(): DeckSnapshot? {
+        pendingRestore?.let { return it } // ainda não recarregado: guarda o que veio do disco
+        val src = source ?: return null
+        val t = track ?: return null
+        return DeckSnapshot(
+            source = src,
+            positionSec = deck.effectivePositionFrames / t.sampleRate,
+            tempoPercent = tempoPercent,
+            tempoBeforeSync = tempoBeforeSync,
+            volume = volume,
+            low = low,
+            mid = mid,
+            high = high,
+            syncOn = syncOn,
+        )
+    }
+
+    /** Carrega [reloaded] e devolve o deck ao estado de [snap] (pausado). false se não coube. */
+    fun applyRestore(reloaded: Track, snap: DeckSnapshot): Boolean {
+        if (pendingRestore !== snap || !load(reloaded, snap.source)) return false
+        changeTempo(snap.tempoPercent)
+        changeVolume(snap.volume)
+        changeLow(snap.low)
+        changeMid(snap.mid)
+        changeHigh(snap.high)
+        syncOn = snap.syncOn
+        tempoBeforeSync = snap.tempoBeforeSync
+        val frames = (snap.positionSec * reloaded.sampleRate).coerceIn(0.0, (reloaded.frames - 1).coerceAtLeast(0).toDouble())
+        deck.seekToFrame(frames)
+        poll()
+        return true
+    }
+
+    /** Desiste de recarregar (arquivo sumiu, por exemplo): o deck fica vazio. */
+    fun dropRestore() {
+        pendingRestore = null
+    }
+
     /** false se o deck está tocando (regra: não troca a faixa enquanto toca). */
     fun load(track: Track, source: LibraryEntry? = null): Boolean {
         if (!deck.load(track)) return false
         this.track = track
         this.source = source
+        pendingRestore = null
         audioReleased = false
         loadingName = null
         bpm = track.beatGrid?.bpm
@@ -222,6 +274,21 @@ class DjController(private val mixer: DjMixer) {
 
     /** Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. */
     fun releaseIdleAudio(): Int = listOf(a, b).count { it.releaseAudio() }
+
+    /** Estado atual para guardar em disco. */
+    fun snapshot(): SessionSnapshot = SessionSnapshot(a.snapshot(), b.snapshot(), crossfader, master, keyLock)
+
+    /**
+     * Volta ao estado guardado depois que o processo foi reiniciado: mixer na hora; os decks ficam
+     * marcados para a tela recarregar os arquivos (pausados, na mesma posição).
+     */
+    fun restore(s: SessionSnapshot) {
+        changeCrossfader(s.crossfader)
+        changeMaster(s.master)
+        if (keyLock != s.keyLock) toggleKeyLock()
+        s.a?.let(a::scheduleRestore)
+        s.b?.let(b::scheduleRestore)
+    }
 
     fun deck(id: DeckId): DeckController = if (id == DeckId.A) a else b
     private fun other(id: DeckId): DeckController = if (id == DeckId.A) b else a

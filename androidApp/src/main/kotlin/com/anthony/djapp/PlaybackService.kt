@@ -34,6 +34,8 @@ class PlaybackService : Service() {
      */
     private var keepAudioOnDestroy = false
 
+    private var ticks = 0
+
     private val watcher = object : Runnable {
         override fun run() {
             val session = DjSession.get(this@PlaybackService)
@@ -43,7 +45,11 @@ class PlaybackService : Service() {
                     finish()
                 }
                 !session.anyPlaying -> finish()
-                else -> handler.postDelayed(this, WATCH_INTERVAL_MS)
+                else -> {
+                    // tocando em segundo plano: guarda a posição de tempos em tempos, caso o processo morra
+                    if (++ticks % SAVE_EVERY_TICKS == 0) session.save()
+                    handler.postDelayed(this, WATCH_INTERVAL_MS)
+                }
             }
         }
     }
@@ -92,7 +98,7 @@ class PlaybackService : Service() {
             // encerrado com o app fora da tela (nada tocando ou app removido): para tudo, para que a
             // música não volte a tocar sozinha quando o app for aberto de novo
             val session = DjSession.get(this)
-            session.pauseAll()
+            session.pauseAll() // também guarda o estado
             session.output.stop()
         }
         super.onDestroy()
@@ -136,6 +142,7 @@ class PlaybackService : Service() {
         private const val CHANNEL_ID = "playback"
         private const val NOTIFICATION_ID = 1
         private const val WATCH_INTERVAL_MS = 400L
+        private const val SAVE_EVERY_TICKS = 12 // ~5 s
 
         /** Inicia o serviço (chamado quando o app sai da tela com música tocando). false se o sistema recusar. */
         fun start(context: Context): Boolean = try {

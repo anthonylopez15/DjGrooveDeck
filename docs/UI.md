@@ -7,7 +7,7 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 - **ONDAS**: dois pratos (deck A e B) em cima; embaixo, a onda ampliada dos dois decks.
 - **MIXER**: ondas menores em cima; embaixo EQ (Low/Mid/High), fader de volume por deck, medidores, crossfader, master.
 - **Biblioteca**: abre ao tocar no botão ♫ de um deck. Lista pastas/arquivos, com BPM e duração por linha.
-- Barra inferior: abas ONDAS / MIXER e botão **KEY** (key lock global); abaixo, o transporte (play, voltar ao início, SYNC por deck) e o crossfader.
+- Barra inferior: abas ONDAS / MIXER e botão **KEY**, com ícones (onda, faders, cadeado fechado/aberto) (key lock global); abaixo, o transporte (play, voltar ao início, SYNC por deck) e o crossfader.
 
 ## Componentes
 
@@ -19,6 +19,7 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 | `Waveform.kt` | `OverviewWaveform` e `ScrollingWaveform`. |
 | `LibraryBrowser.kt` | Lista com preenchimento de carregamento por linha. |
 | `Library.kt` | Contrato `Library` e `EmptyLibrary`. |
+| `SessionSnapshot.kt` | Estado da sessão para guardar em disco (`DeckSnapshot`, `encode`/`decode`). |
 
 ## Ondas
 

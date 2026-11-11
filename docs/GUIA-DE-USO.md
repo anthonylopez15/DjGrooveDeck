@@ -32,7 +32,7 @@ Aba **MIXER**: EQ de 3 bandas por deck (esquerda total = corta a banda), fader d
 
 Com música tocando, ao sair do app ela continua e aparece uma notificação com **Pausar** e atalho para abrir. Ao voltar, tudo está como deixou. Sem música tocando, o áudio é desligado ao sair da tela. Removendo o app dos recentes, a música para.
 
-Em aparelhos com pouca memória, o Android pode pedir para liberar RAM enquanto o app está em segundo plano: as faixas dos decks parados são recarregadas sozinhas do arquivo ao voltar, com posição, tempo e SYNC preservados.
+Em aparelhos com pouca memória, o Android pode pedir para liberar RAM enquanto o app está em segundo plano: as faixas dos decks parados são recarregadas sozinhas do arquivo ao voltar, com posição, tempo e SYNC preservados. Mesmo que o sistema feche o app, na próxima abertura as faixas voltam (pausadas), no ponto em que estavam.
 
 ## Problemas comuns
 

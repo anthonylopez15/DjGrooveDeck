@@ -1,0 +1,121 @@
+package com.anthony.djapp.ui
+
+import com.anthony.djapp.engine.BeatGrid
+import com.anthony.djapp.engine.DjMixer
+import com.anthony.djapp.engine.Track
+import kotlin.math.abs
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/** Guardar o estado da sessão em texto e voltar a ele num processo novo. */
+class SessionRestoreTest {
+    private val rate = 44100
+    private val entryA = LibraryEntry("content://tree/x\\y\nprimary:Música/A=1.mp3", "A=1.mp3", false, 77L)
+    private val entryB = LibraryEntry("content://tree/x\nprimary:B.mp3", "B.mp3", false, 5L)
+
+    private fun track(name: String, bpm: Double) =
+        Track(name, rate, ShortArray(rate * 2 * 40), beatGrid = BeatGrid(bpm, 0.2))
+
+    private fun settle(mixer: DjMixer, c: DjController) {
+        mixer.render(FloatArray(2 * 512), 512)
+        c.poll()
+    }
+
+    @Test
+    fun encodeDecodeRoundTripKeepsEverything() {
+        val s = SessionSnapshot(
+            a = DeckSnapshot(entryA, 12.5, 3.2f, -1f, 0.66f, 0.1f, 0.5f, 0.9f, syncOn = true),
+            b = null,
+            crossfader = 0.3f,
+            master = 0.7f,
+            keyLock = false,
+        )
+        assertEquals(s, SessionSnapshot.decode(s.encode()))
+    }
+
+    @Test
+    fun corruptOrMissingStateIsIgnored() {
+        assertNull(SessionSnapshot.decode(null))
+        assertNull(SessionSnapshot.decode(""))
+        assertNull(SessionSnapshot.decode("lixo sem formato"))
+        assertNull(SessionSnapshot.decode("v=999\ncrossfader=0.1"))
+        // valores fora da faixa são limitados, não quebram
+        val d = assertNotNull(SessionSnapshot.decode("v=1\ncrossfader=7\na.id=x\na.name=n\na.tempo=90\na.volume=NaN"))
+        assertEquals(1f, d.crossfader)
+        assertEquals(16f, d.a!!.tempoPercent)
+        assertEquals(1f, d.a!!.volume)
+    }
+
+    @Test
+    fun controllerStateSurvivesANewProcess() {
+        // "processo 1": duas faixas, ajustes, SYNC e posição
+        val m1 = DjMixer(rate)
+        val c1 = DjController(m1)
+        assertTrue(c1.loadTrack(DeckId.A, track("A", 124.0), entryA))
+        assertTrue(c1.loadTrack(DeckId.B, track("B", 128.0), entryB))
+        c1.a.changeTempo(2.5f)
+        c1.a.changeVolume(0.6f)
+        c1.a.changeLow(0.2f)
+        c1.toggleSync(DeckId.B)
+        c1.a.seek(0.5f)
+        c1.changeCrossfader(0.25f)
+        c1.changeMaster(0.6f)
+        c1.toggleKeyLock()
+        settle(m1, c1)
+        val saved = c1.snapshot().encode()
+
+        // "processo 2": sessão nova lendo o texto guardado
+        val m2 = DjMixer(rate)
+        val c2 = DjController(m2)
+        c2.restore(assertNotNull(SessionSnapshot.decode(saved)))
+        assertEquals(0.25f, c2.crossfader)
+        assertEquals(0.6f, c2.master)
+        assertFalse(c2.keyLock)
+        val pa = assertNotNull(c2.a.pendingRestore)
+        val pb = assertNotNull(c2.b.pendingRestore)
+        assertFalse(c2.a.hasTrack, "a faixa só volta depois de recarregar do arquivo")
+        // antes de recarregar, guardar de novo não perde nada
+        assertEquals(saved, c2.snapshot().encode())
+
+        // a tela recarrega os arquivos
+        assertTrue(c2.a.applyRestore(track("A", 124.0), pa))
+        assertTrue(c2.b.applyRestore(track("B", 128.0), pb))
+        settle(m2, c2)
+        assertNull(c2.a.pendingRestore)
+        assertEquals(entryA, c2.a.source)
+        assertEquals(2.5f, c2.a.tempoPercent)
+        assertEquals(0.6f, c2.a.volume)
+        assertEquals(0.2f, c2.a.low)
+        assertTrue(c2.b.syncOn)
+        assertFalse(c2.a.playing, "volta pausado")
+        assertTrue(abs(c2.a.positionSec - c1.a.positionSec) < 0.01, "posição ${c2.a.positionSec} vs ${c1.a.positionSec}")
+        assertFalse(m2.keyLock)
+        assertFalse(m2.deckA.keyLock)
+
+        // desligar o SYNC restaurado devolve o tempo de antes de sincronizar
+        c2.toggleSync(DeckId.B)
+        assertEquals(0f, c2.b.tempoPercent)
+    }
+
+    @Test
+    fun loadingAnotherTrackCancelsPendingRestore() {
+        val c = DjController(DjMixer(rate))
+        c.restore(SessionSnapshot(DeckSnapshot(entryA, 5.0, 0f, 0f, 1f, .5f, .5f, .5f, false), null, .5f, .8f, true))
+        val pending = assertNotNull(c.a.pendingRestore)
+        assertTrue(c.loadTrack(DeckId.A, track("Outra", 120.0), entryB))
+        assertNull(c.a.pendingRestore)
+        assertFalse(c.a.applyRestore(track("A", 124.0), pending), "recarga atrasada não sobrescreve a escolha do usuário")
+        assertEquals(entryB, c.a.source)
+    }
+
+    @Test
+    fun trackWithoutSourceIsNotSaved() {
+        val c = DjController(DjMixer(rate))
+        c.loadTrack(DeckId.A, track("A", 124.0))
+        assertNull(c.snapshot().a)
+    }
+}

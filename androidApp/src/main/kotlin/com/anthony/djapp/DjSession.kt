@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import com.anthony.djapp.engine.AndroidAudioOutput
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.ui.DjController
+import com.anthony.djapp.ui.SessionSnapshot
 
 /**
  * A "sessão" de DJ vive no processo, e não na tela: o mixer, a saída de áudio e o controller (faixas
@@ -13,19 +14,27 @@ import com.anthony.djapp.ui.DjController
  * recriada. A tela só se liga a ela de novo ao voltar, e tudo aparece como estava.
  *
  * O [PlaybackService] mantém o processo vivo em primeiro plano enquanto há música tocando.
+ *
+ * Se mesmo assim o sistema encerrar o processo, o estado guardado com [Session.save] volta quando a
+ * sessão nasce de novo: as faixas são recarregadas dos arquivos, pausadas, na mesma posição.
  */
 object DjSession {
     class Session(context: Context) {
         val output = AndroidAudioOutput(context)
         val mixer = DjMixer(output.sampleRate)
         val controller = DjController(mixer)
+        private val prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
 
         init {
+            // processo novo: volta ao que estava (os decks são recarregados quando a tela aparece)
+            SessionSnapshot.decode(prefs.getString(KEY_STATE, null))?.let(controller::restore)
+
             // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
             // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
             context.registerComponentCallbacks(object : ComponentCallbacks2 {
                 override fun onTrimMemory(level: Int) {
                     if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND && !activityVisible) {
+                        save() // pedido de memória costuma vir antes de o processo ser encerrado
                         controller.releaseIdleAudio()
                     }
                 }
@@ -44,8 +53,16 @@ object DjSession {
         fun pauseAll() {
             mixer.deckA.pause()
             mixer.deckB.pause()
+            save()
+        }
+
+        /** Guarda o estado em disco (assíncrono, barato). Chamar na thread principal. */
+        fun save() {
+            prefs.edit().putString(KEY_STATE, controller.snapshot().encode()).apply()
         }
     }
+
+    private const val KEY_STATE = "state"
 
     @Volatile private var session: Session? = null
 

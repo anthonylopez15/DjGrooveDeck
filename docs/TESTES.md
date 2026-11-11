@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (54 testes)
+## Suítes (61 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -22,6 +22,8 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio. |
 | `EngineStressTest` | Carga: operações aleatórias reproduzíveis (semente fixa) por ~46 s de áudio e muitas buscas com key lock. |
 | `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller. |
+| `SessionRestoreTest` (`shared`) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
+| `FormatTest` (`shared`) | Porcentagens do volume e dos knobs. |
 
 ### Teste de carga do motor
 
@@ -48,5 +50,6 @@ Roteiros já executados com sucesso:
 - Sair e voltar rapidamente várias vezes (corrida entre serviço e tela).
 - Notificação e ação Pausar; remoção dos recentes.
 - Pedido de memória em segundo plano e recarga ao voltar.
+- Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
 Não verificado: desconexão de fone/Bluetooth (recriação do `AudioTrack` em troca de rota real) e o caminho de erro de memória com arquivos gigantes (só compilado).
