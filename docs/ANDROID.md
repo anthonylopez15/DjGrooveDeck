@@ -34,7 +34,7 @@ onStop               foreground = false; se tocando inicia o serviço, senão ou
 adb logcat -s DjAudio
 ```
 
-Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desconexão chega ~1 s antes de a rota mudar para o alto-falante, então a música já está pausada quando o som sairia no celular; ao religar, a rota volta ao Bluetooth sem recriar a saída e o play funciona. Não testado: fone USB-C (o aparelho de teste não tem entrada P2). O caminho é o mesmo do Bluetooth: o Android envia o mesmo aviso de desconexão.
+Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desconexão chega ~1 s antes de a rota mudar para o alto-falante, então a música já está pausada quando o som sairia no celular; ao religar, a rota volta ao Bluetooth sem recriar a saída e o play funciona. Também verificado com fone USB-C (adaptador ASUS): ao conectar a rota passou para o USB; ao desconectar, o aviso chegou ~1,4 s antes da troca para o alto-falante e a música pausou. O aparelho de teste não tem entrada P2.
 
 ## Biblioteca (SAF)
 
