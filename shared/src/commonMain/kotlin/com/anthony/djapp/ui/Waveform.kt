@@ -20,10 +20,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.ceil
 
 private const val VISIBLE_SEC = 6.0
 private val BassColor = Color(0xFFEF4444)
 private val TrebleColor = Color(0xFF3B82F6)
+private val BarColor = Color(0xFFF59E0B)
 
 /** Visão geral da faixa inteira; toque ou arraste para buscar. [progress] é lido só no desenho. */
 @Composable
@@ -111,6 +113,28 @@ fun ScrollingWaveform(
                         )
                     }
                     x += 3f
+                }
+            }
+            // grade de batidas: linha fraca em cada batida, laranja a cada 4 (compasso)
+            val bpm = deck.bpm
+            if (track != null && bpm != null) {
+                val period = 60.0 / bpm
+                val tStart = deck.positionSec - VISIBLE_SEC / 2
+                val tEnd = deck.positionSec + VISIBLE_SEC / 2
+                val first = deck.firstBeatSec
+                var n = ceil((tStart - first) / period).toInt().coerceAtLeast(0)
+                while (true) {
+                    val t = first + n * period
+                    if (t > tEnd) break
+                    val x = ((t - tStart) / VISIBLE_SEC * w).toFloat()
+                    val bar = n % 4 == 0
+                    drawLine(
+                        if (bar) BarColor else Color.White.copy(alpha = 0.35f),
+                        Offset(x, 0f),
+                        Offset(x, h),
+                        strokeWidth = if (bar) 3f else 1.5f,
+                    )
+                    n++
                 }
             }
             drawLine(Color(0xFFFF3B30), Offset(w / 2f, 0f), Offset(w / 2f, h), strokeWidth = 3f)

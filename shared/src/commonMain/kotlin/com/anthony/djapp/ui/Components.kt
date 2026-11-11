@@ -1,6 +1,7 @@
 package com.anthony.djapp.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -10,9 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +40,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 internal val Idle = Color(0xFF8A94A0)
+internal val SyncBlue = Color(0xFF3B82F6)
+internal val BpmText = Color(0xFFE6EDF3)
 internal val Groove = Color(0xFF39424D)
 
 /** Botão redondo de play/pause com ícone desenhado (sem depender de fonte/emoji). */
@@ -75,8 +80,9 @@ fun PlayButton(
     }
 }
 
+/** Volta ao início da faixa (ícone |◄ desenhado, sem depender de fonte). */
 @Composable
-fun CueButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun RestartButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = Idle.copy(alpha = if (enabled) 1f else 0.35f)
     Box(
         modifier
@@ -85,7 +91,18 @@ fun CueButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifi
             .border(1.5.dp, c, CircleShape)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text("CUE", color = c, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+    ) {
+        Canvas(Modifier.size(18.dp)) {
+            drawRect(c, Offset(0f, 0f), Size(size.width * 0.16f, size.height))
+            val p = Path().apply {
+                moveTo(size.width, 0f)
+                lineTo(size.width * 0.28f, size.height / 2f)
+                lineTo(size.width, size.height)
+                close()
+            }
+            drawPath(p, c)
+        }
+    }
 }
 
 /**
@@ -93,7 +110,7 @@ fun CueButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifi
  * tempo/decorrido/restante. Por enquanto só visual.
  */
 @Composable
-fun Platter(deck: DeckController, color: Color, modifier: Modifier = Modifier) {
+fun Platter(deck: DeckController, color: Color, bpmMatched: Boolean, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val d: Dp = min(maxWidth, maxHeight)
         Box(Modifier.size(d), contentAlignment = Alignment.Center) {
@@ -117,7 +134,13 @@ fun Platter(deck: DeckController, color: Color, modifier: Modifier = Modifier) {
             val big = (d.value * 0.14f).sp
             val small = (d.value * 0.095f).sp
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatTempo(deck.tempoPercent), color = color, fontSize = big, fontWeight = FontWeight.Bold)
+                Text(formatTempo(deck.tempoPercent), fontSize = small, color = Idle)
+                Text(
+                    deck.effectiveBpm?.let { formatBpm(it) } ?: "--",
+                    color = if (bpmMatched) SyncBlue else BpmText,
+                    fontSize = big,
+                    fontWeight = FontWeight.Bold,
+                )
                 if (deck.hasTrack) {
                     Text(formatTenths(deck.elapsedTenths), fontSize = small)
                     Text("-" + formatTenths(deck.durationTenths - deck.elapsedTenths), fontSize = small, color = Idle)
@@ -254,6 +277,35 @@ fun LevelMeter(level: () -> Float, modifier: Modifier = Modifier) {
             drawRect(if (on) base else Color(0xFF232B35), Offset(0f, y), Size(size.width, segH))
         }
     }
+}
+
+/** SYNC de 3 estados: cinza (desligado), contorno azul (ligado) e azul cheio (batidas travadas). */
+@Composable
+fun SyncButton(state: SyncState, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(8.dp)
+    val a = if (enabled) 1f else 0.35f
+    val off = state == SyncState.Off
+    Box(
+        modifier
+            .height(40.dp)
+            .clip(shape)
+            .background(if (state == SyncState.Locked) SyncBlue.copy(alpha = a) else Color.Transparent)
+            .border(if (off) 1.5.dp else 2.dp, (if (off) Idle else SyncBlue).copy(alpha = a), shape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "SYNC",
+            color = (if (off) Idle else Color.White).copy(alpha = a),
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+        )
+    }
+}
+
+internal fun formatBpm(bpm: Double): String {
+    val t = kotlin.math.round(bpm * 10).toInt()
+    return "${t / 10}.${t % 10}"
 }
 
 internal fun formatTempo(p: Float): String {

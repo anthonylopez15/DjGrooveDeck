@@ -6,6 +6,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import com.anthony.djapp.engine.AndroidTrackDecoder
 import com.anthony.djapp.engine.Track
+import com.anthony.djapp.engine.TrackInfo
 import com.anthony.djapp.ui.Library
 import com.anthony.djapp.ui.LibraryEntry
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,8 @@ class AndroidLibrary(
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                 DocumentsContract.Document.COLUMN_DISPLAY_NAME,
                 DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+                DocumentsContract.Document.COLUMN_SIZE,
             ),
             null, null, null,
         )?.use { c ->
@@ -79,7 +82,8 @@ class AndroidLibrary(
                 val name = c.getString(1) ?: continue
                 val mime = c.getString(2) ?: ""
                 val isDir = mime == DocumentsContract.Document.MIME_TYPE_DIR
-                if (isDir || isAudio(name, mime)) out += LibraryEntry("$tree\n$id", name, isDir)
+                val stamp = c.getLong(3) * 31 + c.getLong(4) // muda se o arquivo for alterado
+                if (isDir || isAudio(name, mime)) out += LibraryEntry("$tree\n$id", name, isDir, stamp)
             }
         }
         out.sortedWith(compareBy({ !it.isFolder }, { it.name.lowercase() }))
@@ -89,6 +93,25 @@ class AndroidLibrary(
         val tree = Uri.parse(file.id.substringBefore('\n'))
         val uri = DocumentsContract.buildDocumentUriUsingTree(tree, file.id.substringAfter('\n'))
         return AndroidTrackDecoder.decode(context, uri, onProgress)
+    }
+
+    private val analysis = context.getSharedPreferences("analysis", Context.MODE_PRIVATE)
+
+    private fun cacheKey(file: LibraryEntry) = "${file.id}#${file.stamp}"
+
+    override fun cachedInfo(file: LibraryEntry): TrackInfo? {
+        val raw = analysis.getString(cacheKey(file), null) ?: return null
+        val (dur, bpm) = raw.split(';').takeIf { it.size == 2 } ?: return null
+        return TrackInfo(dur.toDoubleOrNull() ?: return null, bpm.toDoubleOrNull())
+    }
+
+    override suspend fun analyze(file: LibraryEntry): TrackInfo? {
+        cachedInfo(file)?.let { return it }
+        val tree = Uri.parse(file.id.substringBefore('\n'))
+        val uri = DocumentsContract.buildDocumentUriUsingTree(tree, file.id.substringAfter('\n'))
+        val info = AndroidTrackDecoder.analyze(context, uri)
+        analysis.edit().putString(cacheKey(file), "${info.durationSec};${info.bpm ?: "-"}").apply()
+        return info
     }
 
     private fun isAudio(name: String, mime: String): Boolean =

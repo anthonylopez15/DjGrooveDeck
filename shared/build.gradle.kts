@@ -10,6 +10,9 @@ kotlin {
         namespace = "com.anthony.djapp.shared"
         compileSdk = 37
         minSdk = 26
+
+        // testes de unidade na JVM (a lógica de SYNC do controller não depende de tela)
+        withHostTest {}
     }
 
     listOf(iosArm64(), iosSimulatorArm64()).forEach {
@@ -20,6 +23,9 @@ kotlin {
     }
 
     sourceSets {
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
         commonMain.dependencies {
             api(project(":engine"))
             implementation(compose.runtime)

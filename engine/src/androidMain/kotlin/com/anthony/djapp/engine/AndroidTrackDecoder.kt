@@ -7,11 +7,14 @@ import android.media.MediaFormat
 import android.net.Uri
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.nio.ByteOrder
 
 /** Decodifica qualquer áudio suportado pelo Android (MP3, AAC, FLAC, WAV, OGG...) para [Track]. */
 object AndroidTrackDecoder {
+    /** Trecho decodificado na análise rápida: o suficiente para o detector de BPM. */
+    private const val ANALYSIS_SECONDS = 100.0
 
     /** [onProgress] recebe 0..1 conforme a decodificação avança (chamado fora da thread principal). */
     suspend fun decode(
@@ -20,15 +23,64 @@ object AndroidTrackDecoder {
         onProgress: (Float) -> Unit = {},
     ): Track = withContext(Dispatchers.Default) {
         val name = displayName(context, uri)
+        val d = decodeRange(context, uri, startUs = 0L, maxSeconds = null, onProgress = onProgress) { ensureActive() }
+        onProgress(1f)
+        Track(name, d.sampleRate, d.pcm)
+    }
+
+    /**
+     * Duração e BPM sem carregar a faixa inteira: decodifica só ~100 s (a partir de 25% da faixa,
+     * se ela for longa), o que é bem mais rápido. Cancelável entre blocos de decodificação.
+     */
+    suspend fun analyze(context: Context, uri: Uri): TrackInfo = withContext(Dispatchers.Default) {
+        val durationUs = durationUs(context, uri)
+        val startUs = if (durationUs > 150_000_000L) (durationUs * 0.25).toLong() else 0L
+        val d = decodeRange(context, uri, startUs, ANALYSIS_SECONDS, {}) { ensureActive() }
+        TrackInfo(
+            durationSec = durationUs / 1_000_000.0,
+            bpm = BpmDetector.detect(d.pcm, d.sampleRate)?.bpm,
+        )
+    }
+
+    private class Decoded(val pcm: ShortArray, val sampleRate: Int)
+
+    private fun durationUs(context: Context, uri: Uri): Long {
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(context, uri, null)
+            val i = firstAudioTrack(extractor)
+            val f = extractor.getTrackFormat(i)
+            if (f.containsKey(MediaFormat.KEY_DURATION)) f.getLong(MediaFormat.KEY_DURATION) else 0L
+        } finally {
+            extractor.release()
+        }
+    }
+
+    private fun firstAudioTrack(extractor: MediaExtractor): Int =
+        (0 until extractor.trackCount).firstOrNull {
+            extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
+        } ?: error("Arquivo sem faixa de áudio")
+
+    /**
+     * Decodifica a partir de [startUs]; se [maxSeconds] não for null, para depois desse tanto de áudio.
+     * [check] é chamado a cada volta do laço (use para propagar cancelamento).
+     */
+    private fun decodeRange(
+        context: Context,
+        uri: Uri,
+        startUs: Long,
+        maxSeconds: Double?,
+        onProgress: (Float) -> Unit,
+        check: () -> Unit,
+    ): Decoded {
         val extractor = MediaExtractor()
         extractor.setDataSource(context, uri, null)
         try {
-            val trackIndex = (0 until extractor.trackCount).firstOrNull {
-                extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
-            } ?: error("Arquivo sem faixa de áudio")
+            val trackIndex = firstAudioTrack(extractor)
             extractor.selectTrack(trackIndex)
             val inFormat = extractor.getTrackFormat(trackIndex)
             val mime = inFormat.getString(MediaFormat.KEY_MIME)!!
+            if (startUs > 0) extractor.seekTo(startUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
 
             val durationUs =
                 if (inFormat.containsKey(MediaFormat.KEY_DURATION)) inFormat.getLong(MediaFormat.KEY_DURATION) else 0L
@@ -36,6 +88,7 @@ object AndroidTrackDecoder {
 
             var sampleRate = inFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = inFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            val maxFrames = maxSeconds?.let { (it * sampleRate).toLong() }
 
             val codec = MediaCodec.createDecoderByType(mime)
             codec.configure(inFormat, null, null, 0)
@@ -48,6 +101,7 @@ object AndroidTrackDecoder {
 
             try {
                 while (!outputDone) {
+                    check()
                     if (!inputDone) {
                         val inIdx = codec.dequeueInputBuffer(10_000)
                         if (inIdx >= 0) {
@@ -59,7 +113,7 @@ object AndroidTrackDecoder {
                             } else {
                                 val st = extractor.sampleTime
                                 codec.queueInputBuffer(inIdx, 0, size, st, 0)
-                                if (durationUs > 0) {
+                                if (maxSeconds == null && durationUs > 0) {
                                     val pct = ((st * 100) / durationUs).toInt().coerceIn(0, 99)
                                     if (pct != lastPct) {
                                         lastPct = pct
@@ -82,6 +136,7 @@ object AndroidTrackDecoder {
                             }
                             codec.releaseOutputBuffer(outIdx, false)
                             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
+                            if (maxFrames != null && out.frames >= maxFrames) outputDone = true
                         }
                         outIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             val f = codec.outputFormat
@@ -94,8 +149,7 @@ object AndroidTrackDecoder {
                 codec.stop()
                 codec.release()
             }
-            onProgress(1f)
-            Track(name, sampleRate, out.toArray())
+            return Decoded(out.toArray(), sampleRate)
         } finally {
             extractor.release()
         }
@@ -111,6 +165,8 @@ object AndroidTrackDecoder {
     private class ShortBuilder(initial: Int) {
         private var data = ShortArray(initial.coerceAtLeast(1024) and 1.inv())
         private var size = 0
+
+        val frames: Int get() = size / 2
 
         fun appendInterleaved(src: java.nio.ShortBuffer, channels: Int) {
             val frames = src.remaining() / channels

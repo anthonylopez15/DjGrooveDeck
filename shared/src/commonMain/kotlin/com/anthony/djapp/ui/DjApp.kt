@@ -48,8 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 private val DeckAColor = Color(0xFF22D3EE)
 private val DeckBColor = Color(0xFFF472B6)
@@ -62,6 +62,8 @@ private val DjColors = darkColorScheme(
     onSurface = Color(0xFFE6EDF3),
     onBackground = Color(0xFFE6EDF3),
 )
+
+private fun mustPauseMessage(id: DeckId) = "Pause o deck ${id.name} para trocar a faixa"
 
 private enum class Tab(val label: String) { Waves("ONDAS"), Mixer("MIXER") }
 
@@ -79,7 +81,16 @@ fun DjApp(controller: DjController, library: Library) {
     var target by remember { mutableStateOf(DeckId.A) }
     var tab by remember { mutableStateOf(Tab.Waves) }
     var status by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // aviso curto no topo; some sozinho
+    LaunchedEffect(notice) {
+        if (notice != null) {
+            delay(2500)
+            notice = null
+        }
+    }
 
     MaterialTheme(colorScheme = DjColors) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -88,18 +99,33 @@ fun DjApp(controller: DjController, library: Library) {
                     controller = controller,
                     browsing = browsing,
                     target = target,
-                    onLoad = { id -> target = id; browsing = true },
+                    notice = notice,
+                    onLoad = { id ->
+                        // regra: não troca a faixa de um deck que está tocando
+                        if (controller.deck(id).playingNow) {
+                            notice = mustPauseMessage(id)
+                        } else {
+                            target = id
+                            browsing = true
+                        }
+                    },
                     onDone = { browsing = false; status = null },
                 )
                 if (browsing) {
                     TransportRow(controller)
                     LibraryBrowser(library, status, Modifier.weight(1f)) { entry ->
                         val deck = controller.deck(target)
-                        if (!deck.loading) scope.launch {
+                        if (deck.playingNow) {
+                            status = mustPauseMessage(target)
+                        } else if (!deck.loading) scope.launch {
                             status = null
                             deck.startLoading(entry.name)
                             try {
-                                deck.load(library.decode(entry, deck::updateLoadProgress))
+                                val loaded = controller.loadTrack(target, library.decode(entry, deck::updateLoadProgress))
+                                if (!loaded) { // o deck começou a tocar durante a decodificação
+                                    deck.cancelLoading()
+                                    status = mustPauseMessage(target)
+                                }
                             } catch (e: CancellationException) {
                                 deck.cancelLoading()
                                 throw e
@@ -112,9 +138,12 @@ fun DjApp(controller: DjController, library: Library) {
                 } else {
                     when (tab) {
                         Tab.Waves -> {
-                            Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp)) {
-                                DeckPlatter(controller.a, DeckAColor, faderFirst = true, Modifier.weight(1f))
-                                DeckPlatter(controller.b, DeckBColor, faderFirst = false, Modifier.weight(1f))
+                            Row(
+                                Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                DeckPlatter(controller, DeckId.A, DeckAColor, Modifier.weight(1f))
+                                DeckPlatter(controller, DeckId.B, DeckBColor, Modifier.weight(1f))
                             }
                             WavesPane(controller, Modifier.weight(1.25f))
                         }
@@ -124,7 +153,7 @@ fun DjApp(controller: DjController, library: Library) {
                             MixerPane(controller, Modifier.weight(1.6f))
                         }
                     }
-                    TabBar(tab) { tab = it }
+                    TabBar(tab, controller.keyLock, controller::toggleKeyLock) { tab = it }
                     TransportRow(controller)
                 }
             }
@@ -139,6 +168,7 @@ private fun Header(
     controller: DjController,
     browsing: Boolean,
     target: DeckId,
+    notice: String?,
     onLoad: (DeckId) -> Unit,
     onDone: () -> Unit,
 ) {
@@ -146,11 +176,13 @@ private fun Header(
         Box(Modifier.fillMaxWidth().height(36.dp), contentAlignment = Alignment.Center) {
             if (browsing) {
                 Button(onClick = onDone, contentPadding = ButtonDefaults.ContentPadding) { Text("OK", fontWeight = FontWeight.Bold) }
+            } else if (notice != null) {
+                Text(notice, color = Color(0xFFFACC15), fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DeckHeader(controller.a, DeckAColor, browsing && target == DeckId.A, mirrored = false, { onLoad(DeckId.A) }, Modifier.weight(1f))
-            DeckHeader(controller.b, DeckBColor, browsing && target == DeckId.B, mirrored = true, { onLoad(DeckId.B) }, Modifier.weight(1f))
+            DeckHeader(controller.a, DeckAColor, browsing && target == DeckId.A, mirrored = false, { onLoad(DeckId.A) }, Modifier.weight(1f), controller.bpmMatched)
+            DeckHeader(controller.b, DeckBColor, browsing && target == DeckId.B, mirrored = true, { onLoad(DeckId.B) }, Modifier.weight(1f), controller.bpmMatched)
         }
     }
 }
@@ -163,6 +195,7 @@ private fun DeckHeader(
     mirrored: Boolean,
     onLoad: () -> Unit,
     modifier: Modifier = Modifier,
+    bpmMatched: Boolean = false,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -183,11 +216,20 @@ private fun DeckHeader(
                 if (loadingName != null) {
                     Text("${(deck.loadProgress * 100).toInt()}%", fontSize = 13.sp, color = color)
                 } else if (deck.hasTrack) {
-                    Text(
-                        "-" + formatTenths(deck.durationTenths - deck.elapsedTenths).substringBeforeLast('.'),
-                        fontSize = 13.sp,
-                        color = Idle,
-                    )
+                    // tempo restante e, ao lado, o BPM efetivo (visível também na lista de músicas)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "-" + formatTenths(deck.durationTenths - deck.elapsedTenths).substringBeforeLast('.'),
+                            fontSize = 13.sp,
+                            color = Idle,
+                        )
+                        Text(
+                            deck.effectiveBpm?.let { "${formatBpm(it)} BPM" } ?: "-- BPM",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (deck.effectiveBpm == null) Idle else if (bpmMatched) SyncBlue else BpmText,
+                        )
+                    }
                 }
             }
             if (mirrored) LoadButton(color, selected, deck, onLoad)
@@ -221,7 +263,7 @@ private fun LoadButton(color: Color, selected: Boolean, deck: DeckController, on
         Modifier
             .size(52.dp)
             .background(if (selected || deck.loading) color.copy(alpha = 0.25f) else Color(0xFF10151B), shape)
-            .border(2.dp, if (selected || deck.loading) color else color.copy(alpha = 0.45f), shape)
+            .border(2.dp, if (selected || deck.loading) color else color.copy(alpha = if (deck.playing) 0.2f else 0.45f), shape)
             .clickable(enabled = !deck.loading, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -234,7 +276,7 @@ private fun LoadButton(color: Color, selected: Boolean, deck: DeckController, on
                 modifier = Modifier.size(30.dp),
             )
         } else {
-            Text("♫", color = color, fontSize = 22.sp)
+            Text("♫", color = color.copy(alpha = if (deck.playing) 0.35f else 1f), fontSize = 22.sp)
         }
     }
 }
@@ -242,22 +284,21 @@ private fun LoadButton(color: Color, selected: Boolean, deck: DeckController, on
 // ---------- pratos ----------
 
 @Composable
-private fun DeckPlatter(deck: DeckController, color: Color, faderFirst: Boolean, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxHeight().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        val fader = @Composable {
-            VerticalFader(
-                value = deck.tempoPercent,
-                onChange = { deck.changeTempo(if (abs(it) < 0.3f) 0f else it) },
-                range = -16f..16f,
-                color = color,
-                resetTo = 0f,
-                centerTick = true,
-                modifier = Modifier.padding(vertical = 8.dp),
+private fun DeckPlatter(controller: DjController, id: DeckId, color: Color, modifier: Modifier = Modifier) {
+    val deck = controller.deck(id)
+    Column(modifier.fillMaxHeight().padding(vertical = 6.dp)) {
+        Platter(deck, color, controller.bpmMatched, Modifier.weight(1f).fillMaxWidth())
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            SyncButton(
+                state = controller.syncState(id),
+                enabled = controller.canToggleSync(id),
+                onClick = { controller.toggleSync(id) },
+                modifier = Modifier.weight(1f),
             )
         }
-        if (faderFirst) fader()
-        Platter(deck, color, Modifier.weight(1f).fillMaxHeight())
-        if (!faderFirst) fader()
     }
 }
 
@@ -331,7 +372,7 @@ private fun EqKnobs(deck: DeckController, color: Color, knob: androidx.compose.u
 // ---------- rodapé ----------
 
 @Composable
-private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
+private fun TabBar(selected: Tab, keyLock: Boolean, onToggleKey: () -> Unit, onSelect: (Tab) -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(Color(0xFF10151B)).padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.Center,
@@ -348,6 +389,17 @@ private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
                     .padding(horizontal = 28.dp, vertical = 10.dp),
             )
         }
+        // KEY: mantém o tom ao mudar o andamento (tempo e SYNC)
+        Text(
+            "KEY",
+            textAlign = TextAlign.Center,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (keyLock) Color(0xFF3B82F6) else Idle,
+            modifier = Modifier
+                .clickable(onClick = onToggleKey)
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+        )
     }
 }
 
@@ -359,11 +411,11 @@ private fun TransportRow(controller: DjController) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CueButton(controller.a.hasTrack, controller.a::cue)
-        PlayButton(controller.a.playing, controller.a.hasTrack, DeckAColor, controller.a::togglePlay)
+        RestartButton(controller.a.hasTrack, { controller.restart(DeckId.A) })
+        PlayButton(controller.a.playing, controller.a.hasTrack, DeckAColor, { controller.togglePlay(DeckId.A) })
         Crossfader(controller.crossfader, controller::changeCrossfader, Modifier.weight(1f))
-        PlayButton(controller.b.playing, controller.b.hasTrack, DeckBColor, controller.b::togglePlay)
-        CueButton(controller.b.hasTrack, controller.b::cue)
+        PlayButton(controller.b.playing, controller.b.hasTrack, DeckBColor, { controller.togglePlay(DeckId.B) })
+        RestartButton(controller.b.hasTrack, { controller.restart(DeckId.B) })
     }
 }
 

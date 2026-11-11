@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.anthony.djapp.engine.TrackInfo
 import kotlinx.coroutines.CancellationException
 
 /** Navegador das pastas vinculadas. Tocar numa faixa chama [onPick]. */
@@ -42,6 +44,23 @@ fun LibraryBrowser(
     var entries by remember { mutableStateOf(listOf<LibraryEntry>()) }
     var loading by remember { mutableStateOf(false) }
     val current = stack.lastOrNull()
+    val infos = remember { mutableStateMapOf<String, TrackInfo>() }
+
+    // Análise de BPM/duração em segundo plano, uma faixa por vez; o que já foi analisado vem do cache.
+    LaunchedEffect(entries) {
+        val files = entries.filter { !it.isFolder }
+        for (f in files) library.cachedInfo(f)?.let { infos[f.id] = it }
+        for (f in files) {
+            if (f.id in infos) continue
+            infos[f.id] = try {
+                library.analyze(f) ?: TrackInfo(0.0, null)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                TrackInfo(0.0, null)
+            }
+        }
+    }
 
     LaunchedEffect(current) {
         if (current != null) {
@@ -80,6 +99,15 @@ fun LibraryBrowser(
         if (status != null) {
             Text(status, color = Idle, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
+        val pending = if (current != null && !loading) entries.count { !it.isFolder && it.id !in infos } else 0
+        if (pending > 0) {
+            Text(
+                "Analisando BPM… ($pending restantes)",
+                color = Idle,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+        }
 
         val list = if (current == null) folders else entries
         when {
@@ -106,6 +134,18 @@ fun LibraryBrowser(
                             fontSize = 16.sp,
                             modifier = Modifier.weight(1f).padding(vertical = 10.dp),
                         )
+                        if (!e.isFolder) {
+                            val info = infos[e.id]
+                            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 16.dp)) {
+                                Text(
+                                    bpmLabel(info),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = if (info?.bpm != null) Color(0xFFE6EDF3) else Idle,
+                                )
+                                Text(durationLabel(info), fontSize = 13.sp, color = Idle)
+                            }
+                        }
                         if (current == null) {
                             TextButton(onClick = { library.removeFolder(e) }) { Text("✕", color = Idle) }
                         }
@@ -116,6 +156,16 @@ fun LibraryBrowser(
         }
     }
 }
+
+private fun bpmLabel(info: TrackInfo?): String {
+    if (info == null) return "… BPM" // ainda analisando
+    val bpm = info.bpm ?: return "-- BPM"
+    return "${formatBpm(bpm)} BPM"
+}
+
+private fun durationLabel(info: TrackInfo?): String =
+    if (info == null || info.durationSec <= 0.0) "--:--"
+    else formatTenths((info.durationSec * 10).toInt()).substringBeforeLast('.')
 
 @Composable
 private fun Centered(text: String) {

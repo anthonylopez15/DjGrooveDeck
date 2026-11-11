@@ -61,6 +61,8 @@ class Track(
     val pcm: ShortArray,
     val peaks: FloatArray = computePeaks(pcm),
     val detail: WaveformDetail = WaveformDetail.compute(pcm, sampleRate),
+    /** BPM e batidas detectados (andamento fixo); null se não houve periodicidade clara. */
+    val beatGrid: BeatGrid? = BpmDetector.detect(pcm, sampleRate),
 ) {
     init {
         require(pcm.size % 2 == 0) { "PCM deve ser estéreo intercalado" }

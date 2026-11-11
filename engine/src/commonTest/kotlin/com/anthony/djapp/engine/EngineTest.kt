@@ -119,21 +119,24 @@ class EngineTest {
     }
 
     @Test
-    fun cueSetsPointWhenStoppedAndReturnsWhenPlaying() {
+    fun restartGoesToStartAndKeepsPlayState() {
         val deck = Deck(48000)
         deck.load(sineTrack(440.0, seconds = 2.0))
-        deck.seekToFraction(0.25f)
-        deck.cue() // parado: define o cue em 25%
-        val cuePoint = deck.cueFrame
-        assertTrue(cuePoint > 0)
-
         deck.play()
         deck.renderAdd(FloatArray(4800 * 2), 4800, 1f)
-        assertTrue(deck.positionFrames > cuePoint)
+        assertTrue(deck.positionFrames > 0)
 
-        deck.cue() // tocando: volta ao cue e para
+        deck.restart() // tocando: volta ao início e continua tocando
+        assertEquals(0.0, deck.positionFrames, 0.0)
+        assertTrue(deck.playing)
+        deck.renderAdd(FloatArray(480 * 2), 480, 1f)
+        assertEquals(480.0, deck.positionFrames, 1e-6)
+
+        deck.pause() // pausado: volta ao início e continua pausado
+        deck.seekToFraction(0.5f)
+        deck.restart()
+        assertEquals(0.0, deck.positionFrames, 0.0)
         assertFalse(deck.playing)
-        assertEquals(cuePoint, deck.positionFrames, 1e-6)
     }
 
     @Test
@@ -184,6 +187,22 @@ class EngineTest {
         deck.pause()
         repeat(30) { deck.renderAdd(out, 512, 1f) }
         assertTrue(deck.level < 0.01f, "nível deve cair a ~0 em pausa: ${deck.level}")
+    }
+
+    @Test
+    fun cannotSwapTrackWhilePlaying() {
+        val deck = Deck(48000)
+        val a = sineTrack(440.0, seconds = 1.0)
+        val b = sineTrack(880.0, seconds = 1.0)
+        assertTrue(deck.load(a))
+        deck.play()
+        assertFalse(deck.load(b), "deck tocando deve recusar a troca")
+        assertTrue(deck.track === a, "a faixa original deve continuar carregada")
+        assertTrue(deck.playing)
+
+        deck.pause()
+        assertTrue(deck.load(b), "pausado aceita a troca")
+        assertTrue(deck.track === b)
     }
 
     @Test

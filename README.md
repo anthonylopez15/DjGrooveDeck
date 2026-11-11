@@ -24,17 +24,20 @@ Requer JDK 17+ e Android SDK (`local.properties` com `sdk.dir`, que não vai pro
 
 ## Estado atual
 
-Funciona (testado só por testes unitários do DSP + build; ainda não rodado num aparelho):
-- 2 decks, play/pause, cue estilo CDJ, busca tocando na waveform
-- Tempo ±16% (varispeed: muda o tom junto, como toca-discos)
-- EQ de 3 bandas por deck com "kill", volume por deck, crossfader, master
+Funciona (testado por testes unitários do DSP e no aparelho; o áudio com música real ainda está sendo avaliado):
+- 2 decks, play/pause, botão de voltar ao início, busca tocando na waveform
+- Navegador de pastas (Storage Access Framework) para carregar faixas
+- Waveform ampliada colorida (grave/agudo) com grade de batidas
+- Detecção de BPM (80–160, andamento fixo)
+- SYNC: iguala o BPM e alinha as batidas; ao desligar volta à velocidade anterior
+- Tempo ±16% com **key lock** (time-stretch WSOLA): muda a velocidade sem mudar o tom; botão KEY desliga (modo toca-discos)
+- EQ de 3 bandas por deck com "kill", volume por deck, crossfader, master, medidores de nível
 
 Ainda não tem:
-- Time-stretch (mudar tempo sem mudar tom) e sync/detecção de BPM
-- Loops, hotcues, efeitos, biblioteca/playlists
+- Loops, hotcues, efeitos, histórico de faixas, knobs de filtro e gain
 - Áudio em segundo plano (precisa de serviço em primeiro plano)
 - Saída de latência mínima: hoje usa `AudioTrack`; o plano é migrar para Oboe (C++/NDK) se a latência incomodar
-- **iOS**: só placeholders (`IosAudioOutput`, `MainViewController`), nunca compilados. Precisa de Mac (Xcode) para o projeto iOS, `AVAudioEngine` e seletor de arquivos.
+- **iOS**: só placeholders (`IosAudioOutput`, `MainViewController`), nunca compilados. Precisa de Mac (Xcode) para o projeto iOS, `AVAudioEngine` e biblioteca de arquivos.
 
 ## Versões
 

@@ -9,6 +9,14 @@ class DjMixer(val sampleRate: Int) {
     @Volatile var crossfader: Float = 0.5f
     @Volatile var masterVolume: Float = 0.8f
 
+    /** Key lock nos dois decks: tempo sem mudar o tom. */
+    var keyLock: Boolean = true
+        set(value) {
+            field = value
+            deckA.keyLock = value
+            deckB.keyLock = value
+        }
+
     /** Preenche [out] com [frames] frames estéreo intercalados (tamanho >= frames*2). */
     fun render(out: FloatArray, frames: Int) {
         out.fill(0f, 0, frames * 2)
