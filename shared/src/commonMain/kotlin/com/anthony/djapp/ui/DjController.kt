@@ -275,6 +275,12 @@ class DjController(private val mixer: DjMixer) {
     /** Aviso vindo de fora da tela (ex.: o fone saiu e a música foi pausada); a tela mostra e limpa. */
     var systemNotice by mutableStateOf<String?>(null)
 
+    /**
+     * Consultado antes de um deck começar a tocar; a plataforma pede o foco de áudio aqui. false
+     * (ex.: durante uma ligação) impede o play. Padrão: sempre pode.
+     */
+    var playbackGate: () -> Boolean = { true }
+
     /** Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. */
     fun releaseIdleAudio(): Int = listOf(a, b).count { it.releaseAudio() }
 
@@ -373,6 +379,7 @@ class DjController(private val mixer: DjMixer) {
         val me = deck(id)
         val o = other(id)
         val starting = !me.playingNow
+        if (starting && me.hasTrack && !me.audioReleased && !playbackGate()) return
         if (starting && (me.syncOn || o.syncOn) && o.playingNow && me.bpm != null && o.bpm != null) {
             if (me.syncOn) matchTempo(follower = me, leader = o) else matchTempo(follower = o, leader = me)
             // largada quantizada: o motor alinha e começa no mesmo bloco; sem encaixe possível, só toca

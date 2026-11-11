@@ -34,11 +34,18 @@ Com música tocando, ao sair do app ela continua e aparece uma notificação com
 
 Em aparelhos com pouca memória, o Android pode pedir para liberar RAM enquanto o app está em segundo plano: as faixas dos decks parados são recarregadas sozinhas do arquivo ao voltar, com posição, tempo e SYNC preservados. Mesmo que o sistema feche o app, na próxima abertura as faixas voltam (pausadas), no ponto em que estavam.
 
+## Interrupções
+
+- **Fone ou Bluetooth desconectou**: a música pausa (não vai para o alto-falante do celular).
+- **Outro app começou a tocar, ou chegou uma ligação**: a música pausa. Ela não volta sozinha: dê play quando quiser (com SYNC, as batidas se alinham de novo).
+- **Som de notificação**: o volume abaixa um instante e volta.
+
 ## Problemas comuns
 
 | Sintoma | Causa provável |
 |---|---|
 | "Pause o deck X para trocar a faixa" | O deck está tocando. |
 | BPM `--` | Faixa sem batida clara, ou ainda analisando. SYNC não liga sem BPM. |
+| "Não dá para tocar agora" | Há uma ligação em andamento (o sistema não libera o áudio). |
 | Sem notificação | Permissão de notificações negada; a música continua tocando mesmo assim. |
 | "Não consegui abrir/recarregar…" | O arquivo foi movido/removido ou não é um áudio suportado. |

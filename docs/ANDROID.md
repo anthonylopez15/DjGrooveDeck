@@ -8,6 +8,7 @@
 | `DjSession` | Objeto do processo com `AndroidAudioOutput`, `DjMixer` e `DjController`. `activityVisible` indica se a tela está à vista. |
 | `PlaybackService` | Serviço em primeiro plano (`mediaPlayback`) com notificação. |
 | `AndroidLibrary` | Biblioteca via Storage Access Framework + cache de análise. |
+| `AudioFocus` | Foco de áudio: pedido antes de tocar; perda pausa o set. |
 
 Manifest: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS`, `largeHeap`, serviço `.PlaybackService` com `foregroundServiceType="mediaPlayback"` e `stopWithTask`.
 
@@ -23,6 +24,16 @@ onStop               foreground = false; se tocando inicia o serviço, senão ou
 - **Serviço**: a cada 400 ms um *watcher* checa: se a tela voltou, o serviço se encerra mantendo o áudio; se nada toca, encerra e desliga a saída. `lastStartId` garante que `stopSelf(id)` não seja ignorado quando chega um novo start. Remover o app dos recentes (`onTaskRemoved`) para tudo.
 - **Notificação**: toque abre o app; ação **Pausar** pausa os dois decks.
 - Sem a permissão `POST_NOTIFICATIONS` (Android 13+) a música segue tocando; só a notificação não aparece.
+
+## Foco de áudio (ligações, outros apps)
+
+- Antes de um deck começar a tocar, `DjController.playbackGate` pede o foco (`AUDIOFOCUS_GAIN`, mídia/música). Negado (ex.: ligação em andamento): o play não acontece e aparece "Não dá para tocar agora (ligação em andamento?)". Pausar não pede nada.
+- **Outro app começou a tocar música** (perda definitiva): pausa os dois decks, solta o foco e avisa "Música pausada: outro app começou a tocar".
+- **Ligação ou assistente de voz** (perda temporária): pausa e avisa "Música pausada (ligação ou outro áudio)". **Não volta a tocar sozinho** quando o foco volta: num set, o DJ decide quando retomar, e os dois decks precisam voltar alinhados (dar play com SYNC realinha).
+- **Som de notificação** (perda breve com volume baixo): o próprio Android abaixa o volume e devolve; o app não faz nada.
+- Em Android 14+ o sistema faz um *fade* de ~2 s no app que perde o foco antes de avisá-lo; por isso o set ainda soa um instante depois de o outro app começar.
+- Verificado no aparelho: com um deck tocando, abrir uma música no YouTube Music tomou o foco e o set pausou. Não verificado: ligação real.
+- Detalhe conhecido: com a tela à vista a saída de áudio fica aberta (tocando silêncio com os decks pausados), então o sistema considera o app "tocando mídia" mesmo parado. Não atrapalha o foco, mas aparece em diagnósticos como o do Fast Pair.
 
 ## Troca de saída de áudio (fone, Bluetooth)
 

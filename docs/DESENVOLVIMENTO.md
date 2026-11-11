@@ -48,7 +48,7 @@ adb shell am start -n com.anthony.djapp/.MainActivity
 Ainda não existe:
 - Loops, hotcues, efeitos, histórico de faixas, knobs de filtro e gain.
 - Latência mínima: migrar `AudioTrack` → Oboe (C++/NDK) se a latência incomodar.
-- Foco de áudio: hoje o app não pausa numa ligação nem quando outro app começa a tocar.
+- Fechar a saída de áudio quando os dois decks ficam parados por um tempo com a tela à vista (hoje ela toca silêncio).
 - **iOS**: só placeholders (`IosAudioOutput`, `MainViewController`), nunca compilados. Precisa de Mac/Xcode, `AVAudioEngine` (source node) e uma biblioteca de arquivos (`Library`) para iOS.
 
 ## Como portar para iOS (resumo)

@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (61 testes)
+## Suítes (63 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -23,6 +23,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `EngineStressTest` | Carga: operações aleatórias reproduzíveis (semente fixa) por ~46 s de áudio e muitas buscas com key lock. |
 | `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller. |
 | `SessionRestoreTest` (`shared`) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
+| `PlaybackGateTest` (`shared`) | O play passa pelo foco de áudio: negado não toca; pausar e deck vazio não pedem. |
 | `FormatTest` (`shared`) | Porcentagens do volume e dos knobs. |
 
 ### Teste de carga do motor
@@ -50,6 +51,7 @@ Roteiros já executados com sucesso:
 - Sair e voltar rapidamente várias vezes (corrida entre serviço e tela).
 - Notificação e ação Pausar; remoção dos recentes.
 - Pedido de memória em segundo plano e recarga ao voltar.
+- Foco de áudio: com um deck tocando, `adb shell am start -a android.intent.action.VIEW -d content://media/external/audio/media/<id> -t audio/mpeg` abre a música em outro player, que toma o foco; o set deve pausar (`adb shell dumpsys audio | grep -A3 "Audio Focus stack"` mostra quem tem o foco).
 - Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.

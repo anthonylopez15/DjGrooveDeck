@@ -36,6 +36,20 @@ object DjSession {
 
             // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
             // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
+            // Foco de áudio: pede antes de tocar; outro app ou uma ligação pausa o set
+            val focus = AudioFocus(context) { transient ->
+                if (anyPlaying) {
+                    pauseAll()
+                    controller.systemNotice =
+                        if (transient) "Música pausada (ligação ou outro áudio)" else "Música pausada: outro app começou a tocar"
+                }
+            }
+            controller.playbackGate = {
+                focus.request().also { granted ->
+                    if (!granted) controller.systemNotice = "Não dá para tocar agora (ligação em andamento?)"
+                }
+            }
+
             // Fone saiu ou o Bluetooth caiu: o Android passaria o som para o alto-falante, no meio do set.
             // Como em qualquer player, pausa (e guarda o estado); o DJ decide quando voltar.
             val noisy = object : BroadcastReceiver() {
