@@ -377,8 +377,15 @@ private fun MixerPane(controller: DjController, modifier: Modifier = Modifier) {
 
 @Composable
 private fun VolumeFader(deck: DeckController, color: Color) {
+    var dragging by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxHeight()) {
-        Text("VOL", fontSize = 11.sp, color = Idle)
+        // enquanto o dedo está no fader, mostra a porcentagem escolhida
+        Text(
+            if (dragging) formatPercent(deck.volume) else "VOL",
+            fontSize = 11.sp,
+            color = if (dragging) color else Idle,
+            fontWeight = if (dragging) FontWeight.Bold else FontWeight.Normal,
+        )
         VerticalFader(
             value = deck.volume,
             onChange = deck::changeVolume,
@@ -386,6 +393,7 @@ private fun VolumeFader(deck: DeckController, color: Color) {
             color = color,
             resetTo = 1f,
             ticks = 5,
+            onActive = { dragging = it },
             modifier = Modifier.padding(vertical = 6.dp),
         )
     }
@@ -398,9 +406,9 @@ private fun EqKnobs(deck: DeckController, color: Color, knob: androidx.compose.u
         verticalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxHeight(),
     ) {
-        Knob(deck.high, deck::changeHigh, color, "HIGH", knob)
-        Knob(deck.mid, deck::changeMid, color, "MID", knob)
-        Knob(deck.low, deck::changeLow, color, "LOW", knob)
+        Knob(deck.high, deck::changeHigh, color, "HIGH", knob, readout = ::formatKnobPercent)
+        Knob(deck.mid, deck::changeMid, color, "MID", knob, readout = ::formatKnobPercent)
+        Knob(deck.low, deck::changeLow, color, "LOW", knob, readout = ::formatKnobPercent)
     }
 }
 

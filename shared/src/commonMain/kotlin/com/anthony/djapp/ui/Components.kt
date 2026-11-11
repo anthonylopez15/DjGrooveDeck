@@ -19,6 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -163,7 +166,9 @@ fun VerticalFader(
     resetTo: Float? = null,
     centerTick: Boolean = false,
     ticks: Int = 0,
+    onActive: (Boolean) -> Unit = {},
 ) {
+    val active by rememberUpdatedState(onActive)
     val current by rememberUpdatedState(value)
     val change by rememberUpdatedState(onChange)
     val span = range.endInclusive - range.start
@@ -175,7 +180,11 @@ fun VerticalFader(
                 detectTapGestures(onDoubleTap = { if (resetTo != null) change(resetTo) })
             }
             .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dy ->
+                detectVerticalDragGestures(
+                    onDragStart = { active(true) },
+                    onDragEnd = { active(false) },
+                    onDragCancel = { active(false) },
+                ) { _, dy ->
                     val usable = (size.height - 22.dp.toPx()).coerceAtLeast(1f)
                     change((current - dy / usable * span).coerceIn(range.start, range.endInclusive))
                 }
@@ -223,16 +232,23 @@ fun Knob(
     label: String,
     size: Dp,
     modifier: Modifier = Modifier,
+    /** Texto mostrado no lugar do rótulo enquanto o dedo está no knob (ex.: "-37%"). */
+    readout: (Float) -> String = { "" },
 ) {
     val current by rememberUpdatedState(value)
     val change by rememberUpdatedState(onChange)
+    var dragging by remember { mutableStateOf(false) }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
             Modifier
                 .size(size)
                 .pointerInput(Unit) { detectTapGestures(onDoubleTap = { change(0.5f) }) }
                 .pointerInput(Unit) {
-                    detectDragGestures { _, drag ->
+                    detectDragGestures(
+                        onDragStart = { dragging = true },
+                        onDragEnd = { dragging = false },
+                        onDragCancel = { dragging = false },
+                    ) { _, drag ->
                         change((current - drag.y / 220.dp.toPx()).coerceIn(0f, 1f))
                     }
                 },
@@ -253,8 +269,18 @@ fun Knob(
                 cap = StrokeCap.Round,
             )
         }
-        Text(label, fontSize = 11.sp, color = Idle)
+        val shown = if (dragging) readout(value) else ""
+        Text(shown.ifEmpty { label }, fontSize = 11.sp, color = if (dragging && shown.isNotEmpty()) color else Idle)
     }
+}
+
+/** Percentual para exibir: 0..1 vira "0%".."100%". */
+internal fun formatPercent(fraction: Float): String = "${(fraction * 100f + 0.5f).toInt()}%"
+
+/** Knob de EQ (0,5 = neutro): "-100%" (corta) .. "+100%". */
+internal fun formatKnobPercent(knob: Float): String {
+    val p = ((knob - 0.5f) * 200f).let { if (it >= 0) (it + 0.5f).toInt() else (it - 0.5f).toInt() }
+    return if (p > 0) "+$p%" else "$p%"
 }
 
 /** Medidor de nível em segmentos (verde → amarelo → vermelho). [level] é lido só no desenho. */
