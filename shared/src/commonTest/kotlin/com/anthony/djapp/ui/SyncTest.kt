@@ -30,17 +30,23 @@ class SyncTest {
         return r
     }
 
+    /** Roda um bloco de áudio (o alinhamento de batidas acontece lá) e atualiza o estado da tela. */
+    private fun Rig.settle() {
+        mixer.render(FloatArray(2 * 512), 512)
+        c.poll()
+    }
+
     private fun Rig.bothPlaying() {
         c.togglePlay(DeckId.A)
         // B começa em outro ponto, fora de fase em relação ao A
         c.deck(DeckId.B).seek(0.2f)
         c.togglePlay(DeckId.B)
-        c.poll()
+        settle()
     }
 
     private fun phaseGap(r: Rig): Double {
-        val pa = r.c.a.beatPhaseNow()!!
-        val pb = r.c.b.beatPhaseNow()!!
+        val pa = r.c.a.beatGrid()!!.phaseAt(r.c.a.engineDeck.effectivePositionFrames / rate)
+        val pb = r.c.b.beatGrid()!!.phaseAt(r.c.b.engineDeck.effectivePositionFrames / rate)
         val d = abs(pa - pb)
         return minOf(d, 1.0 - d)
     }
@@ -52,7 +58,7 @@ class SyncTest {
         assertFalse(r.c.bpmMatched)
 
         r.c.toggleSync(DeckId.B) // B segue A
-        r.c.poll()
+        r.settle()
 
         assertEquals(126.0, r.c.b.effectiveBpm!!, 0.2) // 122 * (1 + 3,3%) ≈ 126
         assertTrue(r.c.bpmMatched)
@@ -71,7 +77,7 @@ class SyncTest {
         assertTrue(r.c.b.tempoPercent > 3f)
 
         r.c.toggleSync(DeckId.B) // desliga o seguidor
-        r.c.poll()
+        r.settle()
 
         assertEquals(0f, r.c.b.tempoPercent)
         assertEquals(122.0, r.c.b.effectiveBpm!!, 1e-9)
@@ -90,7 +96,7 @@ class SyncTest {
         val tempo = r.c.b.tempoPercent
 
         r.c.togglePlay(DeckId.A) // pausa o líder
-        r.c.poll()
+        r.settle()
 
         assertFalse(r.c.locked)
         assertEquals(SyncState.Armed, r.c.syncState(DeckId.B)) // contorno: ligado, sem travar
@@ -107,7 +113,7 @@ class SyncTest {
         r.c.togglePlay(DeckId.A)       // pausa
         r.c.deck(DeckId.A).seek(0.31f) // e volta noutro ponto
         r.c.togglePlay(DeckId.A)       // play: largada alinhada
-        r.c.poll()
+        r.settle()
 
         assertTrue(r.c.locked)
         assertTrue(phaseGap(r) < 0.01, "batidas alinhadas: ${phaseGap(r)}")
@@ -118,7 +124,7 @@ class SyncTest {
     fun pausedFollowerKeepsItsTempoUntilPlay() {
         val r = rig()
         r.c.togglePlay(DeckId.A) // só o A toca
-        r.c.poll()
+        r.settle()
 
         r.c.toggleSync(DeckId.B) // B parado: arma o SYNC, mas não muda de andamento
         assertTrue(r.c.b.syncOn)
@@ -128,7 +134,7 @@ class SyncTest {
 
         r.c.deck(DeckId.B).seek(0.17f)
         r.c.togglePlay(DeckId.B) // play: entra no andamento do A, na batida certa
-        r.c.poll()
+        r.settle()
 
         assertEquals(126.0, r.c.b.effectiveBpm!!, 0.2)
         assertTrue(r.c.locked)
@@ -143,7 +149,7 @@ class SyncTest {
         val tempo = r.c.b.tempoPercent
 
         r.c.toggleSync(DeckId.A) // botão do líder, aceso só pelo vínculo
-        r.c.poll()
+        r.settle()
 
         assertFalse(r.c.locked)
         assertFalse(r.c.a.syncOn)
@@ -151,6 +157,22 @@ class SyncTest {
         assertEquals(tempo, r.c.b.tempoPercent) // cada um fica como está
         assertTrue(r.c.bpmMatched)              // o BPM segue igual (azul)
         assertEquals(SyncState.Off, r.c.syncState(DeckId.B))
+    }
+
+    @Test
+    fun syncDoesNotLockWhenTheTempoCannotMatch() {
+        val r = Rig()
+        r.c.loadTrack(DeckId.A, track("A", 85.0, 0.1))
+        r.c.loadTrack(DeckId.B, track("B", 128.0, 0.3))
+        r.bothPlaying()
+
+        r.c.toggleSync(DeckId.B) // 85/128 pede -34%: passa do limite de ±16%
+        r.settle()
+
+        assertEquals(-16f, r.c.b.tempoPercent)
+        assertFalse(r.c.bpmMatched)
+        assertFalse(r.c.locked, "BPM diferentes não podem aparecer como travados")
+        assertEquals(SyncState.Armed, r.c.syncState(DeckId.B)) // ligado, mas sem travar
     }
 
     @Test

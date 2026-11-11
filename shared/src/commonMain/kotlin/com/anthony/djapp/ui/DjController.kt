@@ -11,7 +11,6 @@ import com.anthony.djapp.engine.Deck
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Eq3
 import com.anthony.djapp.engine.Track
-import com.anthony.djapp.engine.beatPhaseDelta
 import kotlin.math.abs
 
 /** Estado observável (Compose) de um deck, ligado ao [Deck] do motor. */
@@ -97,20 +96,11 @@ class DeckController(private val deck: Deck) {
     /** Estado real do motor (sem esperar o próximo quadro de tela). */
     val playingNow: Boolean get() = deck.playing
 
-    /** Fase da batida (0..1) na posição atual do motor, ou null sem BPM. */
-    fun beatPhaseNow(): Double? {
-        val t = deck.track ?: return null
-        val b = bpm ?: return null
-        return BeatGrid(b, firstBeatSec).phaseAt(deck.positionFrames / t.sampleRate)
-    }
+    /** Deck do motor, para o mixer alinhar as batidas na thread de áudio. */
+    internal val engineDeck: Deck get() = deck
 
-    /** Anda [deltaBeats] batidas (para alinhar com o outro deck). */
-    fun nudgeBeats(deltaBeats: Double) {
-        val t = deck.track ?: return
-        val b = bpm ?: return
-        val frames = deltaBeats * 60.0 / b * t.sampleRate
-        deck.seekToFrame((deck.positionFrames + frames).coerceIn(0.0, (t.frames - 1).coerceAtLeast(0).toDouble()))
-    }
+    /** Grade de batidas deste deck (BPM e primeira batida), ou null sem BPM. */
+    fun beatGrid(): BeatGrid? = bpm?.let { BeatGrid(it, firstBeatSec) }
 
     val hasTrack: Boolean get() = track != null
     val title: String get() = track?.name ?: ""
@@ -280,8 +270,8 @@ class DjController(private val mixer: DjMixer) {
         val starting = !me.playingNow
         if (starting && (me.syncOn || o.syncOn) && o.playingNow && me.bpm != null && o.bpm != null) {
             if (me.syncOn) matchTempo(follower = me, leader = o) else matchTempo(follower = o, leader = me)
-            lockBeats(follower = me, leader = o)
-            me.togglePlay()
+            // largada quantizada: o motor alinha e começa no mesmo bloco; sem encaixe possível, só toca
+            if (!lockBeats(follower = me, leader = o, startFollower = true)) me.togglePlay()
         } else {
             me.togglePlay()
             if (!starting) phaseLocked = false
@@ -296,12 +286,19 @@ class DjController(private val mixer: DjMixer) {
         if (me.playingNow && o.playingNow && (me.syncOn || o.syncOn)) lockBeats(follower = me, leader = o)
     }
 
-    /** Alinha as batidas do [follower] às do [leader] (caminho mais curto) e marca o encaixe. */
-    private fun lockBeats(follower: DeckController, leader: DeckController) {
-        val pl = leader.beatPhaseNow() ?: return
-        val pf = follower.beatPhaseNow() ?: return
-        follower.nudgeBeats(beatPhaseDelta(pl, pf))
+    /**
+     * Pede ao motor para alinhar as batidas do [follower] às do [leader] (e, se [startFollower],
+     * começar a tocar no mesmo bloco). Só trava se os BPM efetivos já estão iguais: com o ajuste
+     * limitado a ±16%, decks de andamentos muito diferentes não casam e não devem aparecer "travados".
+     * Devolve se o pedido foi feito.
+     */
+    private fun lockBeats(follower: DeckController, leader: DeckController, startFollower: Boolean = false): Boolean {
+        if (!bpmMatched) return false
+        val followerGrid = follower.beatGrid() ?: return false
+        val leaderGrid = leader.beatGrid() ?: return false
+        mixer.requestAlign(follower.engineDeck, leader.engineDeck, followerGrid, leaderGrid, startFollower)
         phaseLocked = true
+        return true
     }
 
     /** Ajusta o tempo do [follower] para que o BPM efetivo dele seja o do [leader] (limitado a ±16%). */

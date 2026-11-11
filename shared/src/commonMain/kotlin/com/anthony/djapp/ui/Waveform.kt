@@ -14,7 +14,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Canvas as GfxCanvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +35,11 @@ private val BassColor = Color(0xFFEF4444)
 private val TrebleColor = Color(0xFF3B82F6)
 private val BarColor = Color(0xFFF59E0B)
 
-/** Visão geral da faixa inteira; toque ou arraste para buscar. [progress] é lido só no desenho. */
+/**
+ * Visão geral da faixa inteira; toque ou arraste para buscar. As barras são desenhadas uma só vez em
+ * dois bitmaps (esmaecido e aceso); a cada quadro só se recorta o aceso até o ponto atual
+ * ([progress] é lido só no desenho), em vez de redesenhar uma linha por pixel.
+ */
 @Composable
 fun OverviewWaveform(
     peaks: FloatArray,
@@ -37,7 +49,7 @@ fun OverviewWaveform(
     modifier: Modifier = Modifier,
 ) {
     val seek by rememberUpdatedState(onSeek)
-    Canvas(
+    Box(
         modifier = modifier
             .pointerInput(Unit) {
                 detectTapGestures { seek((it.x / size.width).coerceIn(0f, 1f)) }
@@ -46,27 +58,42 @@ fun OverviewWaveform(
                 detectHorizontalDragGestures { change, _ ->
                     seek((change.position.x / size.width).coerceIn(0f, 1f))
                 }
-            },
-    ) {
-        val w = size.width
-        val h = size.height
-        val mid = h / 2f
-        val p = progress()
-        if (peaks.isNotEmpty()) {
-            val px = w.toInt().coerceAtLeast(1)
-            for (x in 0 until px) {
-                val peak = peaks[(x.toLong() * peaks.size / px).toInt().coerceIn(0, peaks.size - 1)]
-                val half = (peak * mid * 0.95f).coerceAtLeast(1f)
-                drawLine(
-                    color = if (x.toFloat() / px <= p) color else color.copy(alpha = 0.35f),
-                    start = Offset(x.toFloat(), mid - half),
-                    end = Offset(x.toFloat(), mid + half),
-                    strokeWidth = 1f,
-                )
             }
+            .drawWithCache {
+                val w = size.width.toInt().coerceAtLeast(1)
+                val h = size.height.toInt().coerceAtLeast(1)
+                val dim = renderBars(this, layoutDirection, w, h, peaks, color.copy(alpha = 0.35f))
+                val bright = renderBars(this, layoutDirection, w, h, peaks, color)
+                onDrawBehind {
+                    val p = progress().coerceIn(0f, 1f)
+                    drawImage(dim)
+                    clipRect(right = p * size.width) { drawImage(bright) }
+                    drawLine(Color.White, Offset(p * size.width, 0f), Offset(p * size.width, size.height), strokeWidth = 2f)
+                }
+            },
+    )
+}
+
+/** Desenha as barras da onda (uma por pixel de largura) num bitmap. */
+private fun renderBars(
+    density: Density,
+    layoutDirection: LayoutDirection,
+    w: Int,
+    h: Int,
+    peaks: FloatArray,
+    color: Color,
+): ImageBitmap {
+    val image = ImageBitmap(w, h)
+    if (peaks.isEmpty()) return image
+    val mid = h / 2f
+    CanvasDrawScope().draw(density, layoutDirection, GfxCanvas(image), Size(w.toFloat(), h.toFloat())) {
+        for (x in 0 until w) {
+            val peak = peaks[(x.toLong() * peaks.size / w).toInt().coerceIn(0, peaks.size - 1)]
+            val half = (peak * mid * 0.95f).coerceAtLeast(1f)
+            drawLine(color, Offset(x.toFloat(), mid - half), Offset(x.toFloat(), mid + half), strokeWidth = 1f)
         }
-        drawLine(Color.White, Offset(p * w, 0f), Offset(p * w, h), strokeWidth = 2f)
     }
+    return image
 }
 
 /**

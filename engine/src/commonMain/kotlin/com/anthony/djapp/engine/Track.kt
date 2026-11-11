@@ -59,8 +59,9 @@ class Track(
     val name: String,
     val sampleRate: Int,
     val pcm: ShortArray,
-    val peaks: FloatArray = computePeaks(pcm),
     val detail: WaveformDetail = WaveformDetail.compute(pcm, sampleRate),
+    /** Picos normalizados (0..1) da faixa inteira, para a visão geral; derivados de [detail]. */
+    val peaks: FloatArray = overviewPeaks(detail),
     /** BPM e batidas detectados (andamento fixo); null se não houve periodicidade clara. */
     val beatGrid: BeatGrid? = BpmDetector.detect(pcm, sampleRate),
 ) {
@@ -72,24 +73,19 @@ class Track(
     val durationSec: Double get() = frames.toDouble() / sampleRate
 
     companion object {
-        /** Picos normalizados (0..1) por "balde", usados para desenhar a waveform. */
-        fun computePeaks(pcm: ShortArray, buckets: Int = 1000): FloatArray {
-            val frames = pcm.size / 2
-            if (frames == 0) return FloatArray(0)
-            val n = minOf(buckets, frames)
+        /** Reduz os picos detalhados a [buckets] picos (máximo de cada grupo), sem reler o PCM. */
+        fun overviewPeaks(detail: WaveformDetail, buckets: Int = 1000): FloatArray {
+            val size = detail.size
+            if (size == 0) return FloatArray(0)
+            val n = minOf(buckets, size)
             val out = FloatArray(n)
-            var globalMax = 1
             for (b in 0 until n) {
-                val start = (b.toLong() * frames / n).toInt()
-                val end = ((b + 1).toLong() * frames / n).toInt().coerceAtLeast(start + 1)
-                var m = 0
-                for (f in start until end) {
-                    m = max(m, max(abs(pcm[2 * f].toInt()), abs(pcm[2 * f + 1].toInt())))
-                }
-                out[b] = m.toFloat()
-                if (m > globalMax) globalMax = m
+                val from = (b.toLong() * size / n).toInt()
+                val to = ((b + 1).toLong() * size / n).toInt().coerceAtLeast(from + 1)
+                var m = 0f
+                for (i in from until to) if (detail.peak[i] > m) m = detail.peak[i]
+                out[b] = m
             }
-            for (i in out.indices) out[i] /= globalMax
             return out
         }
     }

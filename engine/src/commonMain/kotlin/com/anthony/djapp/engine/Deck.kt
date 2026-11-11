@@ -29,7 +29,15 @@ class Deck(private val outRate: Int) {
     /** Mantém o tom ao mudar o tempo (time-stretch). */
     @Volatile var keyLock: Boolean = true
 
-    @Volatile private var pendingSeek: Double = -1.0
+    /**
+     * Busca pedida pela UI: objeto imutável publicado numa única escrita volátil. A thread de áudio
+     * só compara a identidade com a última aplicada ([appliedSeek]) e nunca "zera" o campo, então uma
+     * busca nova postada no meio de um bloco jamais é apagada.
+     */
+    private class SeekRequest(val frame: Double)
+
+    @Volatile private var seekRef: SeekRequest? = null
+    @Volatile private var appliedSeek: SeekRequest? = null
     private val eq = Eq3(outRate)
     private var lastGain = 0f
 
@@ -51,7 +59,7 @@ class Deck(private val outRate: Int) {
         if (playing) return false
         track = t
         positionFrames = 0.0
-        pendingSeek = 0.0
+        seekRef = SeekRequest(0.0)
         return true
     }
 
@@ -77,9 +85,19 @@ class Deck(private val outRate: Int) {
         seekToFrame(fraction.coerceIn(0f, 1f) * (t.frames - 1).coerceAtLeast(0).toDouble())
     }
 
+    /**
+     * Posição para quem decide em cima dela (SYNC, fase da batida): uma busca ainda não aplicada pela
+     * thread de áudio vale mais que [positionFrames], que pode estar velho.
+     */
+    val effectivePositionFrames: Double
+        get() {
+            val s = seekRef
+            return if (s != null && s !== appliedSeek) s.frame else positionFrames
+        }
+
     /** Vai para [frame] (da faixa); a thread de áudio aplica no próximo bloco. */
     fun seekToFrame(frame: Double) {
-        pendingSeek = frame
+        seekRef = SeekRequest(frame)
         positionFrames = frame
     }
 
@@ -90,17 +108,17 @@ class Deck(private val outRate: Int) {
      */
     fun renderAdd(out: FloatArray, frames: Int, mixGain: Float) {
         var pos = positionFrames
-        val seek = pendingSeek
-        if (seek >= 0.0) {
-            pos = seek
-            pendingSeek = -1.0
+        val seek = seekRef
+        if (seek != null && seek !== appliedSeek) {
+            pos = seek.frame
+            appliedSeek = seek
             stretchActive = false // busca: o stretcher recomeça daqui
         }
 
         val t = track
         val target = volume * mixGain
         if (t == null || !playing) {
-            positionFrames = pos
+            if (seekRef === appliedSeek) positionFrames = pos
             lastGain = target
             level *= 0.8f
             return
@@ -187,6 +205,7 @@ class Deck(private val outRate: Int) {
 
         level = maxOf(pk, level * 0.9f)
         lastGain = target
-        positionFrames = pos
+        // se a UI pediu uma busca durante este bloco, ela vence: não sobrescreve com a posição velha
+        if (seekRef === appliedSeek) positionFrames = pos
     }
 }

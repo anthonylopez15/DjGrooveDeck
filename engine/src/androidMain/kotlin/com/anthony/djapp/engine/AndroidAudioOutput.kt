@@ -22,12 +22,15 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
     private val burstFrames: Int =
         am.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)?.toIntOrNull() ?: 256
 
-    @Volatile private var running = false
-    private var thread: Thread? = null
-    private var track: AudioTrack? = null
+    /** Cada thread de áudio tem a sua flag: uma thread antiga nunca "revive" por causa de um novo start(). */
+    private class Worker {
+        @Volatile var alive = true
+    }
 
-    override fun start(mixer: DjMixer) {
-        if (running) return
+    private var worker: Worker? = null
+    private var thread: Thread? = null
+
+    private fun createTrack(chunkFrames: Int): AudioTrack {
         val format = AudioFormat.Builder()
             .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
             .setSampleRate(sampleRate)
@@ -36,11 +39,9 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
         val minBytes = AudioTrack.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_FLOAT,
         )
-        // chunks de 2 bursts; buffer do track com pelo menos 2 chunks
-        val chunkFrames = burstFrames * 2
+        // buffer do track com pelo menos 2 chunks
         val bufferBytes = maxOf(minBytes, chunkFrames * 2 * Float.SIZE_BYTES * 2)
-
-        val at = AudioTrack.Builder()
+        return AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -52,27 +53,57 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .build()
-        track = at
-        running = true
+    }
+
+    private fun sleepQuietly(ms: Long) {
+        try {
+            Thread.sleep(ms)
+        } catch (_: InterruptedException) {
+        }
+    }
+
+    override fun start(mixer: DjMixer) {
+        if (worker != null) return
+        val chunkFrames = burstFrames * 2 // chunks de 2 bursts
+        val w = Worker()
+        worker = w
 
         thread = Thread({
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
             val buf = FloatArray(chunkFrames * 2)
-            at.play()
-            while (running) {
+            var at: AudioTrack? = null
+            while (w.alive) {
+                if (at == null) {
+                    at = try {
+                        createTrack(chunkFrames).also { it.play() }
+                    } catch (e: Exception) {
+                        null
+                    }
+                    if (at == null) { // sem saída agora (ex.: o fone saiu): tenta de novo logo
+                        sleepQuietly(300)
+                        continue
+                    }
+                }
                 mixer.render(buf, chunkFrames)
                 val written = at.write(buf, 0, buf.size, AudioTrack.WRITE_BLOCKING)
-                if (written < 0) break
+                if (written < 0) {
+                    // a rota de áudio mudou ou o track morreu (DEAD_OBJECT): recria em vez de ficar mudo
+                    runCatching { at.release() }
+                    at = null
+                    sleepQuietly(150)
+                }
             }
-            at.stop()
-            at.release()
+            at?.let {
+                runCatching { it.stop() }
+                runCatching { it.release() }
+            }
         }, "dj-audio").also { it.start() }
     }
 
     override fun stop() {
-        running = false
+        worker?.alive = false
+        worker = null
         thread?.join(500)
         thread = null
-        track = null
     }
 }

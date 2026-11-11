@@ -1,5 +1,6 @@
 package com.anthony.djapp.ui
 
+import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.IosAudioOutput
@@ -10,8 +11,12 @@ import com.anthony.djapp.engine.IosAudioOutput
  * Quando houver, o app Swift chama MainViewController() e implementa AudioOutput e Library reais.
  */
 fun MainViewController() = ComposeUIViewController {
-    val output = IosAudioOutput()
-    val mixer = DjMixer(output.sampleRate)
-    output.start(mixer)
-    DjApp(DjController(mixer), EmptyLibrary)
+    // remember: sem isso cada recomposição criaria outro mixer/controller e perderia o estado
+    val controller = remember {
+        val output = IosAudioOutput()
+        val mixer = DjMixer(output.sampleRate)
+        output.start(mixer)
+        DjController(mixer)
+    }
+    DjApp(controller, EmptyLibrary)
 }

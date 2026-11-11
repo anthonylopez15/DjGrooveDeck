@@ -47,12 +47,12 @@ class KeyLockQualityTest {
         return out
     }
 
-    /** Frequência do pico espectral perto de [expected] (DFT com passo de 0,05 Hz). */
+    /** Frequência do pico espectral perto de [expected] (±4%, DFT com passo de 0,1 Hz). */
     private fun peakNear(x: FloatArray, from: Int, to: Int, rate: Int, expected: Double): Double {
         var bestF = expected
         var bestMag = -1.0
-        var f = expected * 0.9
-        while (f <= expected * 1.1) {
+        var f = expected * 0.96
+        while (f <= expected * 1.04) {
             var re = 0.0
             var im = 0.0
             val w = 2 * PI * f / rate
@@ -66,7 +66,7 @@ class KeyLockQualityTest {
                 bestMag = mag
                 bestF = f
             }
-            f += 0.05
+            f += 0.1
         }
         return bestF
     }
@@ -85,8 +85,7 @@ class KeyLockQualityTest {
                 for ((f, _) in notes) {
                     val measured = peakNear(out, from, to, outRate, f)
                     val cents = 1200.0 * kotlin.math.ln(measured / f) / kotlin.math.ln(2.0)
-                    println("pitch trackRate=$trackRate tempo=$tempo nota=$f medido=${"%.2f".format(measured)} desvio=${"%.1f".format(cents)} cents")
-                    if (abs(cents) > 10.0) problems += "trackRate=$trackRate tempo=$tempo nota=$f: ${"%.1f".format(cents)} cents"
+                    if (abs(cents) > 10.0) problems += "trackRate=$trackRate tempo=$tempo nota=$f: ${cents.toInt()} cents"
                 }
             }
         }

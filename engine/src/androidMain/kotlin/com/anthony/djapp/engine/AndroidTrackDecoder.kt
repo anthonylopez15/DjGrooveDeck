@@ -23,10 +23,24 @@ object AndroidTrackDecoder {
         onProgress: (Float) -> Unit = {},
     ): Track = withContext(Dispatchers.Default) {
         val name = displayName(context, uri)
-        val d = decodeRange(context, uri, startUs = 0L, maxSeconds = null, onProgress = onProgress) { ensureActive() }
-        onProgress(1f)
-        Track(name, d.sampleRate, d.pcm)
+        try {
+            val d = decodeRange(
+                context, uri, startUs = 0L, maxSeconds = null, onProgress = onProgress,
+                memoryLimitFrames = memoryLimitFrames(),
+            ) { ensureActive() }
+            onProgress(1f)
+            Track(name, d.sampleRate, d.pcm)
+        } catch (e: OutOfMemoryError) {
+            // OutOfMemoryError é Error, não Exception: sem isto o app fecha em vez de avisar
+            throw IllegalStateException("Memória insuficiente para carregar esta faixa", e)
+        }
     }
+
+    /**
+     * Quantos frames cabem em memória: o PCM (4 bytes/frame) existe duas vezes no pico (buffer de
+     * decodificação + cópia final), então usa-se ~60% do heap: 0,075 frames por byte de heap.
+     */
+    private fun memoryLimitFrames(): Long = (Runtime.getRuntime().maxMemory() * 0.075).toLong()
 
     /**
      * Duração e BPM sem carregar a faixa inteira: decodifica só ~100 s (a partir de 25% da faixa,
@@ -71,6 +85,7 @@ object AndroidTrackDecoder {
         startUs: Long,
         maxSeconds: Double?,
         onProgress: (Float) -> Unit,
+        memoryLimitFrames: Long = Long.MAX_VALUE,
         check: () -> Unit,
     ): Decoded {
         val extractor = MediaExtractor()
@@ -89,12 +104,21 @@ object AndroidTrackDecoder {
             var sampleRate = inFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = inFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val maxFrames = maxSeconds?.let { (it * sampleRate).toLong() }
+            val durationFrames = if (durationUs > 0) (durationUs / 1_000_000.0 * sampleRate).toLong() else 0L
+            if (maxSeconds == null && durationFrames > memoryLimitFrames) {
+                throw IllegalStateException(
+                    "Faixa muito longa para a memória do aparelho (máx. ~${memoryLimitFrames / sampleRate / 60} min)",
+                )
+            }
 
             val codec = MediaCodec.createDecoderByType(mime)
             codec.configure(inFormat, null, null, 0)
             codec.start()
 
-            val out = ShortBuilder(sampleRate * 2 * 30) // 30 s iniciais; cresce sob demanda
+            // com a duração conhecida, aloca de uma vez (evita o buffer dobrando de tamanho)
+            val out = ShortBuilder(
+                if (maxSeconds == null && durationFrames > 0) ((durationFrames + 8192) * 2).toInt() else sampleRate * 2 * 30,
+            )
             val info = MediaCodec.BufferInfo()
             var inputDone = false
             var outputDone = false
@@ -133,6 +157,11 @@ object AndroidTrackDecoder {
                                 buf.limit(info.offset + info.size)
                                 val shorts = buf.order(ByteOrder.nativeOrder()).asShortBuffer()
                                 out.appendInterleaved(shorts, channels)
+                                if (out.frames > memoryLimitFrames) {
+                                    throw IllegalStateException(
+                                        "Faixa muito longa para a memória do aparelho (máx. ~${memoryLimitFrames / sampleRate / 60} min)",
+                                    )
+                                }
                             }
                             codec.releaseOutputBuffer(outIdx, false)
                             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
