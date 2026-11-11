@@ -1,5 +1,6 @@
 package com.anthony.djapp.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,7 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -306,6 +309,7 @@ private fun VolumeFader(deck: DeckController, color: Color) {
             range = 0f..1f,
             color = color,
             resetTo = 1f,
+            ticks = 5,
             modifier = Modifier.padding(vertical = 6.dp),
         )
     }
@@ -374,7 +378,23 @@ private fun Crossfader(value: Float, onChange: (Float) -> Unit, modifier: Modifi
             Box(Modifier.size(width = 16.dp, height = 40.dp).background(Color(0xFFDDE3EA), RoundedCornerShape(5.dp)))
         },
         track = {
-            Box(Modifier.fillMaxWidth().height(4.dp).background(Groove, RoundedCornerShape(2.dp)))
+            // guia + 5 marcações (0, 25, 50, 75, 100%) acima e abaixo, alinhadas ao curso da alça
+            Canvas(Modifier.fillMaxWidth().height(40.dp)) {
+                val half = 8.dp.toPx() // metade da largura da alça
+                val usable = size.width - 2 * half
+                val cy = size.height / 2f
+                drawLine(Groove, Offset(0f, cy), Offset(size.width, cy), strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+                val gap = 6.dp.toPx()
+                for (i in 0..4) {
+                    val x = half + usable * i / 4f
+                    val major = i % 2 == 0
+                    val len = (if (major) 9.dp else 5.dp).toPx()
+                    val c = if (major) Color(0xFFC3CCD6) else Idle
+                    val w = 1.5.dp.toPx()
+                    drawLine(c, Offset(x, cy - gap - len), Offset(x, cy - gap), strokeWidth = w)
+                    drawLine(c, Offset(x, cy + gap), Offset(x, cy + gap + len), strokeWidth = w)
+                }
+            }
         },
     )
 }

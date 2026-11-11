@@ -139,6 +139,7 @@ fun VerticalFader(
     modifier: Modifier = Modifier,
     resetTo: Float? = null,
     centerTick: Boolean = false,
+    ticks: Int = 0,
 ) {
     val current by rememberUpdatedState(value)
     val change by rememberUpdatedState(onChange)
@@ -161,6 +162,19 @@ fun VerticalFader(
         val cx = size.width / 2f
         val usable = size.height - thumbH
         drawLine(Groove, Offset(cx, thumbH / 2f), Offset(cx, size.height - thumbH / 2f), strokeWidth = 4f, cap = StrokeCap.Round)
+        // marcações de nível (sem números), dos dois lados da guia; as pontas e o meio são mais longos
+        if (ticks >= 2) {
+            for (i in 0 until ticks) {
+                val y = thumbH / 2f + usable * i / (ticks - 1)
+                val major = i == 0 || i == ticks - 1 || i == (ticks - 1) / 2 && ticks % 2 == 1
+                val gap = 6.dp.toPx()
+                val len = (if (major) 13.dp else 8.dp).toPx()
+                val c = if (major) Color(0xFFC3CCD6) else Idle
+                val w = 1.5.dp.toPx()
+                drawLine(c, Offset(cx - gap - len, y), Offset(cx - gap, y), strokeWidth = w)
+                drawLine(c, Offset(cx + gap, y), Offset(cx + gap + len, y), strokeWidth = w)
+            }
+        }
         if (centerTick) {
             val y = thumbH / 2f + usable / 2f
             drawLine(Idle, Offset(cx - 12f, y), Offset(cx + 12f, y), strokeWidth = 2f)
