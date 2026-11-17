@@ -124,8 +124,7 @@ object DjSession {
 
         /** Pausa os dois decks. */
         fun pauseAll() {
-            mixer.deckA.pause()
-            mixer.deckB.pause()
+            controller.pauseAll() // pelo controller: o encaixe de batidas também se desfaz
             save()
         }
 

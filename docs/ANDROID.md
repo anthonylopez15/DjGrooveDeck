@@ -27,6 +27,10 @@ onStop               foreground = false, salva; se tocando inicia o serviço, se
 - **Notificação**: toque abre o app; ação **Pausar** pausa os dois decks.
 - Sem a permissão `POST_NOTIFICATIONS` (Android 13+) a música segue tocando; só a notificação não aparece.
 
+## Pausas de fora da tela
+
+Toda pausa que não vem de um botão da tela — ação **Pausar** da notificação, perda do foco de áudio, saída desconectada, fim do serviço — passa por `DjSession.pauseAll()` → `DjController.pauseAll()`, que pausa os dois decks, desfaz o encaixe de batidas (`phaseLocked`) e descarta uma largada alinhada ainda pendente no mixer (`DjMixer.cancelAlign`); depois o estado é salvo. Pausar o motor direto deixava o controller achando que as batidas seguiam travadas.
+
 ## Foco de áudio (ligações, outros apps)
 
 - Antes de um deck começar a tocar, `DjController.playbackGate` pede o foco (`AUDIOFOCUS_GAIN`, mídia/música). Negado (ex.: ligação em andamento): o play não acontece e aparece "Não dá para tocar agora (ligação em andamento?)". Pausar não pede nada.

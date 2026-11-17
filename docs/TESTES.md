@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (64 testes)
+## Suítes (66 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -21,7 +21,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `MixerAlignTest` | Alinhamento na thread de áudio, largada quantizada, fusão de pedidos. |
 | `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio, faixa com key lock liberada com a thread parada. |
 | `EngineStressTest` | Carga: operações aleatórias reproduzíveis (semente fixa) por ~46 s de áudio e muitas buscas com key lock. |
-| `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller. |
+| `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller, pausa de fora da tela (desfaz o encaixe e a largada pendente). |
 | `SessionRestoreTest` (`shared`) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
 | `PlaybackGateTest` (`shared`) | O play passa pelo foco de áudio: negado não toca; pausar e deck vazio não pedem. |
 | `FormatTest` (`shared`) | Porcentagens do volume e dos knobs. |

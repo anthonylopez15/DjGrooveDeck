@@ -232,4 +232,43 @@ class SyncTest {
         r.c.togglePlay(DeckId.A)
         assertEquals(0, r.c.releaseIdleAudio())
     }
+
+    @Test
+    fun pauseAllFromOutsideTheScreenUndoesTheBeatLock() {
+        val r = rig()
+        r.bothPlaying()
+        r.c.toggleSync(DeckId.B)
+        r.settle()
+        assertTrue(r.c.locked)
+
+        r.c.pauseAll() // "Pausar" da notificação, perda de foco, fone desconectado
+        r.settle()
+        assertFalse(r.c.a.playing)
+        assertFalse(r.c.b.playing)
+
+        // A acelera além do que B alcança (122 BPM + 16% = 141,5 < 146): não dá para travar de novo.
+        // Antes, o encaixe antigo ficava preso e os botões apareciam "travados" mesmo assim.
+        r.c.a.changeTempo(16f)
+        r.c.togglePlay(DeckId.A)
+        r.c.togglePlay(DeckId.B)
+        r.settle()
+        assertTrue(r.c.a.playing && r.c.b.playing)
+        assertFalse(r.c.bpmMatched)
+        assertFalse(r.c.locked)
+        assertEquals(SyncState.Armed, r.c.syncState(DeckId.B))
+    }
+
+    @Test
+    fun pauseAllDropsAPendingAlignedStart() {
+        val r = rig()
+        r.c.toggleSync(DeckId.B)
+        r.c.togglePlay(DeckId.A)
+        r.settle()
+        r.c.togglePlay(DeckId.B) // largada alinhada: o motor só dá o play no próximo bloco
+        r.c.pauseAll() // a pausa chega antes desse bloco
+        r.settle()
+        r.settle()
+        assertFalse(r.c.b.playingNow, "o seguidor não pode começar a tocar depois da pausa")
+        assertFalse(r.c.a.playingNow)
+    }
 }

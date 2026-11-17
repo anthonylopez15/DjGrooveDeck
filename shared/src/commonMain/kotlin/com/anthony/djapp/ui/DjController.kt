@@ -207,6 +207,12 @@ class DeckController(private val deck: Deck) {
     }
 
     fun togglePlay() = deck.togglePlay()
+
+    /** Pausa já, sem esperar o próximo quadro de tela para refletir no estado. */
+    fun pause() {
+        deck.pause()
+        playing = false
+    }
     fun restart() = deck.restart()
     fun seek(fraction: Float) = deck.seekToFraction(fraction)
 
@@ -388,6 +394,18 @@ class DjController(private val mixer: DjMixer) {
             me.togglePlay()
             if (!starting) phaseLocked = false
         }
+    }
+
+    /**
+     * Pausa os dois decks por fora da tela (notificação, foco de áudio, fone desconectado...): desfaz o
+     * encaixe de batidas e descarta uma largada alinhada ainda pendente no motor, que senão faria o
+     * seguidor tocar depois da pausa.
+     */
+    fun pauseAll() {
+        mixer.cancelAlign()
+        a.pause()
+        b.pause()
+        phaseLocked = false
     }
 
     /** Volta ao início da faixa; com SYNC e o outro tocando, cai de novo na batida certa. */

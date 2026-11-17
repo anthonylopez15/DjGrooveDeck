@@ -46,6 +46,11 @@ class DjMixer(val sampleRate: Int) {
         pendingAlign = AlignRequest(follower, leader, followerGrid, leaderGrid, start)
     }
 
+    /** Descarta o alinhamento pedido e ainda não aplicado (ex.: tudo foi pausado antes do próximo bloco). */
+    fun cancelAlign() {
+        pendingAlign = null
+    }
+
     private fun applyAlign(r: AlignRequest) {
         val lt = r.leader.track ?: return
         val ft = r.follower.track ?: return
