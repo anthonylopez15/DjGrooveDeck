@@ -136,5 +136,5 @@ Cada passo: testes passando, verificação no aparelho e um commit próprio.
    Android inicia em `GrooveDeckApp`; Activity e serviço recebem por `inject()`; a `DjSession` foi
    removida. Como o Koin monta ao rodar, dois testes validam o grafo antes: `KoinModulesTest`
    (módulos comuns com plataforma falsa) e `AndroidModulesVerifyTest` (grafo Android completo).
-6. [ ] Separar `Components.kt` por tipo (botões, faders, knobs, ícones).
+6. [x] `Components.kt` separado por tipo: `Buttons`, `Platter`, `VerticalFader`, `Knob`, `LevelMeter`, `TabIcons`, `Formatting` (cores compartilhadas no `Theme`).
 7. [x] Teste de arquitetura que falha se o `domain` importar Android/Compose/iOS ou camadas externas (`shared/src/androidHostTest/.../ArchitectureTest.kt`).

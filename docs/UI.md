@@ -19,12 +19,18 @@ Estado, ações e ViewModel ficam em `presentation` (`DjUiState`, `DjAction`, `D
 | Arquivo | Conteúdo |
 |---|---|
 | `DjApp.kt` | Raiz: lê `DjViewModel.uiState`, repassa ações e chama `onFrame()` a cada quadro. |
-| `Theme.kt` | Cores dos decks e tema escuro (`DjColors`, `deckColor`). |
+| `Theme.kt` | Cores dos decks, cores compartilhadas (`Idle`, `SyncBlue`, `BpmText`, `Groove`) e tema escuro (`DjColors`, `deckColor`). |
 | `DeckHeader.kt` | Cabeçalho: aviso do topo, nome/tempo/BPM de cada deck, botão ♫ e visão geral da onda. |
 | `DecksPane.kt` | Aba ONDAS: pratos com SYNC e ondas ampliadas. |
 | `MixerPane.kt` | Aba MIXER: volume, EQ, medidores e master. |
 | `BottomBar.kt` | Abas com ícones (ONDAS, MIXER, KEY) e transporte com o crossfader. |
-| `Components.kt` | `Platter`, `VerticalFader` (com marcas), `Knob`, `LevelMeter`, `SyncButton`, `PlayButton`, `RestartButton`, `TabIcon`, formatação. |
+| `Buttons.kt` | `PlayButton`, `RestartButton`, `SyncButton` (ícones desenhados). |
+| `Platter.kt` | Prato: anel girando com a faixa, tempo, BPM e tempos. |
+| `VerticalFader.kt` | Fader vertical com marcas (arraste relativo; toque duplo volta ao padrão). |
+| `Knob.kt` | Knob rotativo com leitura em % enquanto arrasta ou fora do neutro. |
+| `LevelMeter.kt` | Medidor de nível em segmentos. |
+| `TabIcons.kt` | Ícones das abas (onda, faders, cadeado). |
+| `Formatting.kt` | Formatação de BPM, tempo, porcentagens e duração (testada em `FormatTest`). |
 | `Waveform.kt` | `OverviewWaveform` e `ScrollingWaveform`. |
 | `LibraryBrowser.kt` | Lista com preenchimento de carregamento por linha. |
 

@@ -20,3 +20,9 @@ internal val DjColors = darkColorScheme(
 
 /** Cor de cada deck (A ciano, B rosa). */
 internal fun deckColor(id: DeckId): Color = if (id == DeckId.A) DeckAColor else DeckBColor
+
+// Cores compartilhadas pelos componentes.
+internal val Idle = Color(0xFF8A94A0)
+internal val SyncBlue = Color(0xFF3B82F6)
+internal val BpmText = Color(0xFFE6EDF3)
+internal val Groove = Color(0xFF39424D)
