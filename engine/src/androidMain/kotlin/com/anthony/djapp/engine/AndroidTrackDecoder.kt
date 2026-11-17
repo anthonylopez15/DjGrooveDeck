@@ -8,6 +8,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.ByteOrder
 
@@ -16,35 +18,52 @@ object AndroidTrackDecoder {
     /** Trecho decodificado na análise rápida: o suficiente para o detector de BPM. */
     private const val ANALYSIS_SECONDS = 100.0
 
+    /**
+     * Uma decodificação completa por vez: cada uma confere a memória livre antes de começar
+     * ([MemoryBudget]); duas ao mesmo tempo (ex.: restaurar os dois decks) passariam juntas na conferência
+     * e somariam os picos.
+     */
+    private val fullDecodeLock = Mutex()
+
     /** [onProgress] recebe 0..1 conforme a decodificação avança (chamado fora da thread principal). */
     suspend fun decode(
         context: Context,
         uri: Uri,
         onProgress: (Float) -> Unit = {},
-    ): Track = withContext(Dispatchers.Default) {
-        val name = displayName(context, uri)
-        try {
-            val d = decodeRange(
-                context,
-                uri,
-                startUs = 0L,
-                maxSeconds = null,
-                onProgress = onProgress,
-                memoryLimitFrames = memoryLimitFrames(),
-            ) { ensureActive() }
-            onProgress(1f)
-            Track(name, d.sampleRate, d.pcm)
-        } catch (e: OutOfMemoryError) {
-            // OutOfMemoryError é Error, não Exception: sem isto o app fecha em vez de avisar
-            throw IllegalStateException("Memória insuficiente para carregar esta faixa", e)
+    ): Track = fullDecodeLock.withLock {
+        withContext(Dispatchers.Default) {
+            val name = displayName(context, uri)
+            try {
+                val d = decodeRange(
+                    context,
+                    uri,
+                    startUs = 0L,
+                    maxSeconds = null,
+                    onProgress = onProgress,
+                    memoryLimit = currentMemoryLimit(),
+                ) { ensureActive() }
+                onProgress(1f)
+                Track(name, d.sampleRate, d.pcm)
+            } catch (e: OutOfMemoryError) {
+                // OutOfMemoryError é Error, não Exception: sem isto o app fecha em vez de avisar
+                throw IllegalStateException("Memória insuficiente para carregar esta faixa", e)
+            }
         }
     }
 
     /**
-     * Quantos frames cabem em memória: o PCM (4 bytes/frame) existe duas vezes no pico (buffer de
-     * decodificação + cópia final), então usa-se ~60% do heap: 0,075 frames por byte de heap.
+     * Limite para a próxima faixa, com a memória em uso agora (inclusive a do outro deck). Se a memória
+     * livre é o que limita, pede uma coleta antes de medir de novo: lixo ainda não coletado não conta.
      */
-    private fun memoryLimitFrames(): Long = (Runtime.getRuntime().maxMemory() * 0.075).toLong()
+    @Suppress("ExplicitGarbageCollectionCall") // proposital: lixo ainda não coletado não é memória ocupada
+    private fun currentMemoryLimit(): MemoryBudget.Limit {
+        val rt = Runtime.getRuntime()
+        fun measure() = MemoryBudget.limit(rt.maxMemory(), rt.totalMemory() - rt.freeMemory())
+        val first = measure()
+        if (!first.byFreeMemory) return first
+        System.gc()
+        return measure()
+    }
 
     /**
      * Duração e BPM sem carregar a faixa inteira: decodifica só ~100 s (a partir de 25% da faixa,
@@ -89,7 +108,7 @@ object AndroidTrackDecoder {
         startUs: Long,
         maxSeconds: Double?,
         onProgress: (Float) -> Unit,
-        memoryLimitFrames: Long = Long.MAX_VALUE,
+        memoryLimit: MemoryBudget.Limit? = null,
         check: () -> Unit,
     ): Decoded {
         val extractor = MediaExtractor()
@@ -109,10 +128,10 @@ object AndroidTrackDecoder {
             var channels = inFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val maxFrames = maxSeconds?.let { (it * sampleRate).toLong() }
             val durationFrames = if (durationUs > 0) (durationUs / 1_000_000.0 * sampleRate).toLong() else 0L
-            if (maxSeconds == null && durationFrames > memoryLimitFrames) {
-                error(
-                    "Faixa muito longa para a memória do aparelho (máx. ~${memoryLimitFrames / sampleRate / 60} min)",
-                )
+            // faixa completa: primeiro a regra do app (10 min), depois a memória do aparelho
+            if (maxSeconds == null && TrackLimits.tooLong(durationUs / 1_000_000.0)) error(TrackLimits.TOO_LONG_MESSAGE)
+            if (memoryLimit != null && durationFrames > memoryLimit.frames) {
+                error(MemoryBudget.tooLongMessage(memoryLimit, sampleRate))
             }
 
             val codec = MediaCodec.createDecoderByType(mime)
@@ -161,10 +180,12 @@ object AndroidTrackDecoder {
                                 buf.limit(info.offset + info.size)
                                 val shorts = buf.order(ByteOrder.nativeOrder()).asShortBuffer()
                                 out.appendInterleaved(shorts, channels)
-                                if (out.frames > memoryLimitFrames) {
-                                    error(
-                                        "Faixa muito longa para a memória do aparelho (máx. ~${memoryLimitFrames / sampleRate / 60} min)",
-                                    )
+                                // arquivo sem duração confiável: confere também enquanto decodifica
+                                if (maxSeconds == null && TrackLimits.tooLong(out.frames.toDouble() / sampleRate)) {
+                                    error(TrackLimits.TOO_LONG_MESSAGE)
+                                }
+                                if (memoryLimit != null && out.frames > memoryLimit.frames) {
+                                    error(MemoryBudget.tooLongMessage(memoryLimit, sampleRate))
                                 }
                             }
                             codec.releaseOutputBuffer(outIdx, false)

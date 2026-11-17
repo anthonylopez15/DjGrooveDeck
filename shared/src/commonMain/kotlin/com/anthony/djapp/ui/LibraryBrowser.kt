@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.engine.TrackInfo
+import com.anthony.djapp.engine.TrackLimits
 import com.anthony.djapp.presentation.LibraryAction
 import com.anthony.djapp.presentation.LibraryUiState
 
@@ -147,7 +148,13 @@ private fun LibraryRow(
                     fontSize = 15.sp,
                     color = if (info?.bpm != null) Color(0xFFE6EDF3) else Idle,
                 )
-                Text(durationLabel(info), fontSize = 13.sp, color = Idle)
+                // acima do limite do app (10 min): não carrega; a duração aparece em destaque
+                val tooLong = info != null && TrackLimits.tooLong(info.durationSec)
+                Text(
+                    durationLabel(info) + if (tooLong) " · longa" else "",
+                    fontSize = 13.sp,
+                    color = if (tooLong) TooLongColor else Idle,
+                )
             }
         }
         if (removable) {
@@ -155,6 +162,8 @@ private fun LibraryRow(
         }
     }
 }
+
+private val TooLongColor = Color(0xFFFACC15)
 
 private fun bpmLabel(info: TrackInfo?): String {
     if (info == null) return "… BPM" // ainda analisando

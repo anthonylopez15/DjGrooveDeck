@@ -12,7 +12,7 @@ Tudo de uma vez (lint + testes + Android Lint + compilação comum do iOS): `./g
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (105 testes)
+## Suítes (112 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -22,6 +22,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `BpmDetectorTest` | BPM e fase em faixas sintéticas, oitava 80–160, rejeição de tom puro/ruído/faixa curta. |
 | `MixerAlignTest` | Alinhamento na thread de áudio, largada quantizada, fusão de pedidos. |
 | `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio, faixa com key lock liberada com a thread parada. |
+| `MemoryBudgetTest`, `TrackLimitsTest` | Quanto cabe na memória (inclusive com o outro deck carregado; o pico nunca passa do heap) e o limite de 10 min. |
 | `EngineStressTest` | Carga: operações aleatórias reproduzíveis (semente fixa) por ~46 s de áudio e muitas buscas com key lock. |
 | `SyncTest` (`shared`, sessão) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller, pausa de fora da tela (desfaz o encaixe e a largada pendente). |
 | `SessionRestoreTest` (`shared`, sessão) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
