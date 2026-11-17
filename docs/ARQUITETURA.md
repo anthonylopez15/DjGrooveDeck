@@ -55,7 +55,7 @@ A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado re
 |---|---|---|
 | `platformModule` | `expect` em `shared/commonMain/di`; `actual` em `androidMain` e `iosMain` | Motor (`AudioOutput`, `DjMixer`) e as portas: `AudioSystem`, `SessionStore`, `TrackRepository`. |
 | `sessionModule` | `shared/commonMain/di` | `MixSession` (`single`: uma por processo). |
-| `presentationModule` | `shared/commonMain/di` | `DjViewModel` (`viewModelOf`: um por tela). |
+| `presentationModule` | `shared/commonMain/di` | `DjViewModel` e `LibraryViewModel` (`viewModelOf`: um por tela). |
 | `androidAppModule` | `androidApp` | `ScreenVisibility`. |
 
 Android inicia em `GrooveDeckApp.onCreate`; iOS em `initKoin()`. Telas pegam o ViewModel com
@@ -81,7 +81,10 @@ DeckMeters ◄── onFrame() a cada quadro: posição e nível lidos do motor 
 - **`DeckMeters`** (`presentation`): exceção de desempenho (ADR, regra 5). Posição e nível mudam a
   cada quadro; ficam em estado Compose próprio, lidos só na fase de desenho; textos usam
   `elapsedTenths` (10x/s).
-- **Telas** (`ui`): recebem `DjUiState` + `onAction` e não têm regra.
+- **`LibraryViewModel`** (`presentation`): a lista de arquivos — navegação nas pastas, listagem e análise de
+  BPM/duração em segundo plano (`LibraryUiState` + `LibraryAction`). Escolher uma faixa vai para o
+  `DjViewModel` (`DjAction.PickTrack`), que carrega no deck.
+- **Telas** (`ui`): recebem estado + `onAction` e não têm regra.
 
 ## Quem é dono de quê (Android)
 

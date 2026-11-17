@@ -12,8 +12,8 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 ## Componentes
 
 Os arquivos abaixo estão em `com.anthony.djapp.ui` e recebem `DjUiState` + `onAction` (sem regra).
-Estado, ações e ViewModel ficam em `presentation` (`DjUiState`, `DjAction`, `DjViewModel`,
-`DeckMeters`); sessão em `data` (`MixSession`, `MixState`, `SessionSnapshot`); regras e o contrato
+Estado, ações e ViewModels ficam em `presentation` (`DjUiState`, `DjAction`, `DjViewModel`,
+`DeckMeters`; `LibraryUiState`, `LibraryAction`, `LibraryViewModel` para a lista de arquivos); sessão em `data` (`MixSession`, `MixState`, `SessionSnapshot`); regras e o contrato
 `TrackRepository` em `domain`.
 
 | Arquivo | Conteúdo |
@@ -32,7 +32,7 @@ Estado, ações e ViewModel ficam em `presentation` (`DjUiState`, `DjAction`, `D
 | `TabIcons.kt` | Ícones das abas (onda, faders, cadeado). |
 | `Formatting.kt` | Formatação de BPM, tempo, porcentagens e duração (testada em `FormatTest`). |
 | `Waveform.kt` | `OverviewWaveform` e `ScrollingWaveform`. |
-| `LibraryBrowser.kt` | Lista com preenchimento de carregamento por linha. |
+| `LibraryBrowser.kt` | Lista de pastas e faixas (estado do `LibraryViewModel`): navegação, BPM/duração por linha e preenchimento da linha em carregamento. |
 
 A tela é **travada em retrato** (`android:screenOrientation="portrait"` no manifest): o layout foi pensado para o celular em pé; deitado, os pratos sumiam e o mixer ficava espremido.
 

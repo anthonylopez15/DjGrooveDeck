@@ -123,8 +123,8 @@ Cada passo: testes passando, verificação no aparelho e um commit próprio.
 3. [x] `DjUiState` + `DjAction` + `DjViewModel` no lugar do `DjController`. A sessão virou
    `data.MixSession` (estado imutável em `StateFlow<MixState>`, sem Compose); posição e nível por
    quadro em `presentation.DeckMeters` (regra 5). `TrackRepository`/`LibraryEntry` foram para o `domain`.
-   Pendente: a lista de arquivos (`LibraryBrowser`) ainda fala direto com o `TrackRepository` — terá seu
-   próprio `LibraryViewModel`.
+   A lista de arquivos ganhou depois o próprio `LibraryViewModel` (`LibraryUiState` + `LibraryAction`):
+   nenhuma tela fala mais direto com uma porta do domínio.
 4. [x] Portas no `domain`: `TrackRepository` (ex-`Library`), `SessionStore` (estado guardado; formato
    em `data.SessionSnapshotCodec`) e `AudioSystem` (pedir para tocar + eventos `PlatformEvent`:
    interrupções e falta de memória). A `MixSession` recebe as portas e decide (pausar, salvar, soltar

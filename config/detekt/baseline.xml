@@ -7,12 +7,10 @@
     <ID>CyclomaticComplexMethod:Deck.kt$Deck$fun renderAdd(out: FloatArray, frames: Int, mixGain: Float)</ID>
     <ID>CyclomaticComplexMethod:DeckHeader.kt$@Composable private fun DeckHeader( deck: DeckUiState, meters: DeckMeters, color: Color, selected: Boolean, mirrored: Boolean, bpmMatched: Boolean, onLoad: () -&gt; Unit, onSeek: (Float) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:DjViewModel.kt$DjViewModel$fun onAction(action: DjAction)</ID>
-    <ID>CyclomaticComplexMethod:LibraryBrowser.kt$@Composable fun LibraryBrowser( library: TrackRepository, status: String?, modifier: Modifier = Modifier, rowLoading: (String) -&gt; Pair&lt;Float, Color&gt;? = { null }, onPick: (LibraryEntry) -&gt; Unit, )</ID>
     <ID>LongMethod:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, memoryLimitFrames: Long = Long.MAX_VALUE, check: () -&gt; Unit, ): Decoded</ID>
     <ID>LongMethod:BpmDetector.kt$BpmDetector$fun detect(pcm: ShortArray, sampleRate: Int): BeatGrid?</ID>
     <ID>LongMethod:Deck.kt$Deck$fun renderAdd(out: FloatArray, frames: Int, mixGain: Float)</ID>
     <ID>LongMethod:DeckHeader.kt$@Composable private fun DeckHeader( deck: DeckUiState, meters: DeckMeters, color: Color, selected: Boolean, mirrored: Boolean, bpmMatched: Boolean, onLoad: () -&gt; Unit, onSeek: (Float) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:LibraryBrowser.kt$@Composable fun LibraryBrowser( library: TrackRepository, status: String?, modifier: Modifier = Modifier, rowLoading: (String) -&gt; Pair&lt;Float, Color&gt;? = { null }, onPick: (LibraryEntry) -&gt; Unit, )</ID>
     <ID>LongMethod:TabIcons.kt$@Composable fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier)</ID>
     <ID>LongMethod:Waveform.kt$@Composable fun ScrollingWaveform( deck: DeckUiState, meters: DeckMeters, color: Color, label: String, onScrub: (deltaSec: Double) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:AndroidTrackDecoder.kt$AndroidTrackDecoder$( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, memoryLimitFrames: Long = Long.MAX_VALUE, check: () -&gt; Unit, )</ID>

@@ -17,17 +17,17 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.anthony.djapp.domain.DeckId
-import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.presentation.DjAction
 import com.anthony.djapp.presentation.DjViewModel
+import com.anthony.djapp.presentation.LibraryViewModel
 import com.anthony.djapp.presentation.Tab
 
 /**
- * Tela principal: lê o estado do [DjViewModel] e repassa as ações. Sem regra nenhuma aqui (ADR 0001).
- * A [library] é usada só pela lista de arquivos (que ainda fala direto com ela).
+ * Tela principal: lê o estado dos ViewModels e repassa as ações. Sem regra nenhuma aqui (ADR 0001).
+ * [libraryViewModel] cuida da lista de arquivos (pastas, BPM); escolher uma faixa vai para o [viewModel].
  */
 @Composable
-fun DjApp(viewModel: DjViewModel, library: TrackRepository) {
+fun DjApp(viewModel: DjViewModel, libraryViewModel: LibraryViewModel) {
     // medidores (posição, nível) acompanham a tela quadro a quadro
     LaunchedEffect(viewModel) {
         while (true) {
@@ -37,6 +37,7 @@ fun DjApp(viewModel: DjViewModel, library: TrackRepository) {
     }
 
     val state by viewModel.uiState.collectAsState()
+    val libraryState by libraryViewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val meters = viewModel::meters
 
@@ -47,13 +48,15 @@ fun DjApp(viewModel: DjViewModel, library: TrackRepository) {
                 if (state.browsing) {
                     TransportRow(state, onAction)
                     LibraryBrowser(
-                        library,
-                        state.libraryStatus,
-                        Modifier.weight(1f),
+                        state = libraryState,
+                        status = state.libraryStatus,
+                        onAction = libraryViewModel::onAction,
+                        onPick = { entry -> onAction(DjAction.PickTrack(entry)) },
+                        modifier = Modifier.weight(1f),
                         rowLoading = { entryId ->
                             state.loadingEntries[entryId]?.let { id -> state.deck(id).loadProgress to deckColor(id) }
                         },
-                    ) { entry -> onAction(DjAction.PickTrack(entry)) }
+                    )
                 } else {
                     when (state.tab) {
                         Tab.Waves -> {

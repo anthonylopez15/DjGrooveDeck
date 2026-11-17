@@ -12,6 +12,7 @@ import com.anthony.djapp.data.AndroidAudioSystem
 import com.anthony.djapp.data.AndroidTrackRepository
 import com.anthony.djapp.data.MixSession
 import com.anthony.djapp.presentation.DjViewModel
+import com.anthony.djapp.presentation.LibraryViewModel
 import com.anthony.djapp.ui.DjApp
 import org.koin.android.ext.android.inject
 import org.koin.compose.viewmodel.koinViewModel
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // o ViewModel sobrevive à recriação da tela; a sessão de áudio, ao processo inteiro
-            DjApp(koinViewModel<DjViewModel>(), library)
+            DjApp(koinViewModel<DjViewModel>(), koinViewModel<LibraryViewModel>())
         }
         askNotificationPermissionOnce()
     }

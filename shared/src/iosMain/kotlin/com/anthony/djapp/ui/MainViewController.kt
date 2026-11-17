@@ -2,8 +2,6 @@ package com.anthony.djapp.ui
 
 import androidx.compose.ui.window.ComposeUIViewController
 import com.anthony.djapp.di.initKoin
-import com.anthony.djapp.domain.TrackRepository
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -15,6 +13,6 @@ import org.koin.compose.viewmodel.koinViewModel
 fun MainViewController() = run {
     initKoin()
     ComposeUIViewController {
-        DjApp(koinViewModel(), koinInject<TrackRepository>())
+        DjApp(koinViewModel(), koinViewModel())
     }
 }

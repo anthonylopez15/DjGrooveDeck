@@ -9,6 +9,7 @@ import com.anthony.djapp.domain.SessionStore
 import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.presentation.DjViewModel
+import com.anthony.djapp.presentation.LibraryViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -50,5 +51,6 @@ class KoinModulesTest {
         val vm1 = koin.get<DjViewModel>()
         val vm2 = koin.get<DjViewModel>()
         assertNotSame(vm1, vm2, "ViewModel é por tela")
+        koin.get<LibraryViewModel>()
     }
 }
