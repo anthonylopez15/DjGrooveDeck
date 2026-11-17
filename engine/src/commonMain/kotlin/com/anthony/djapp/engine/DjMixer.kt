@@ -1,5 +1,7 @@
 package com.anthony.djapp.engine
 
+import kotlin.concurrent.Volatile
+
 /** Mixer de 2 decks + crossfader + master. [render] é chamado pela thread de áudio. */
 class DjMixer(val sampleRate: Int) {
     val deckA = Deck(sampleRate)
