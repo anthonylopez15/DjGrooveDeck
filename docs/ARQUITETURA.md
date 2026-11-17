@@ -47,7 +47,7 @@ Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
 | `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±16%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
 | `Interruptions.kt` | `Interruption` (saída desconectada, outro app, temporária, play negado, pausa pedida) e `InterruptionPolicy`: pausar, salvar, avisar. |
 
-A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado real do motor), pergunta às regras e executa a decisão. A plataforma (`DjSession`) só detecta eventos e chama `mix.onInterruption(...)`.
+A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado real do motor), pergunta às regras e executa a decisão. A plataforma (`AudioSystem`) só detecta eventos e os emite; a `MixSession` os trata (`onPlatformEvent`).
 
 ## Injeção de dependências (Koin)
 
