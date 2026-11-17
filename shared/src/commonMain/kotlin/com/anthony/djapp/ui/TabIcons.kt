@@ -14,8 +14,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-enum class TabIconKind { Waves, Mixer, KeyLock, KeyUnlock }
-
 /** Ícones da barra inferior, desenhados em Canvas (sem dependência de pacote de ícones). */
 @Composable
 fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier) {
@@ -30,7 +28,13 @@ fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier) {
                 val step = w / heights.size
                 heights.forEachIndexed { i, f ->
                     val x = step * (i + 0.5f)
-                    drawLine(color, Offset(x, h / 2f - h * f / 2f), Offset(x, h / 2f + h * f / 2f), strokeWidth = sw * 1.2f, cap = StrokeCap.Round)
+                    drawLine(
+                        color,
+                        Offset(x, h / 2f - h * f / 2f),
+                        Offset(x, h / 2f + h * f / 2f),
+                        strokeWidth = sw * 1.2f,
+                        cap = StrokeCap.Round,
+                    )
                 }
             }
             TabIconKind.Mixer -> {
@@ -63,7 +67,12 @@ fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier) {
                     } else {
                         moveTo(cx + r, bodyTop - h * 0.04f)
                         lineTo(cx + r, h * 0.3f)
-                        arcTo(androidx.compose.ui.geometry.Rect(cx - r + w * 0.3f, h * 0.3f - r, cx + r + w * 0.3f, h * 0.3f + r), 180f, 180f, false)
+                        arcTo(
+                            androidx.compose.ui.geometry.Rect(cx - r + w * 0.3f, h * 0.3f - r, cx + r + w * 0.3f, h * 0.3f + r),
+                            180f,
+                            180f,
+                            false,
+                        )
                         lineTo(cx + r + w * 0.3f, h * 0.38f)
                     }
                 }
@@ -72,3 +81,6 @@ fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Qual ícone desenhar em [TabIcon]. */
+enum class TabIconKind { Waves, Mixer, KeyLock, KeyUnlock }

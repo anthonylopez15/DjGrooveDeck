@@ -32,7 +32,9 @@ class EngineTest {
     private fun rmsThroughEq(freq: Double, low: Double, mid: Double, high: Double): Double {
         val deck = Deck(48000)
         deck.load(sineTrack(freq))
-        deck.lowDb = low; deck.midDb = mid; deck.highDb = high
+        deck.lowDb = low
+        deck.midDb = mid
+        deck.highDb = high
         deck.play()
         // blocos de 512 frames, como a thread de áudio real (a rampa de ganho dura 1 bloco)
         val chunk = 512
@@ -155,7 +157,8 @@ class EngineTest {
         mixer.deckA.load(sineTrack(440.0, amp = 1.0))
         mixer.deckB.load(sineTrack(440.0, amp = 1.0))
         mixer.deckA.lowDb = Eq3.MAX_DB
-        mixer.deckA.play(); mixer.deckB.play()
+        mixer.deckA.play()
+        mixer.deckB.play()
         mixer.masterVolume = 1f
         mixer.crossfader = 0.5f
         val out = FloatArray(2048 * 2)
@@ -181,7 +184,10 @@ class EngineTest {
         assertEquals(0f, deck.level, 0f)
         deck.play()
         val out = FloatArray(512 * 2)
-        repeat(4) { out.fill(0f); deck.renderAdd(out, 512, 1f) }
+        repeat(4) {
+            out.fill(0f)
+            deck.renderAdd(out, 512, 1f)
+        }
         assertTrue(deck.level in 0.4f..0.55f, "pico de um seno 0,5 deve ficar perto de 0,5: ${deck.level}")
 
         deck.pause()

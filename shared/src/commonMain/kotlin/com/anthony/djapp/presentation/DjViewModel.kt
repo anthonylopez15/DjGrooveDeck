@@ -104,6 +104,8 @@ class DjViewModel(
     }
 
     /** Carrega [entry] no deck de destino (regra: só com o deck parado). */
+    // decodificar pode lançar qualquer coisa (codec, arquivo, permissão): vira mensagem para o usuário
+    @Suppress("TooGenericExceptionCaught")
     private fun loadFromLibrary(entry: LibraryEntry) {
         val id = screen.value.target
         val deck = session.deck(id)
@@ -142,33 +144,37 @@ class DjViewModel(
      * Sair de cena cancela a recarga; ela é tentada de novo ao voltar.
      */
     private fun reloadFromFilesIfNeeded(mix: MixState) {
-        for (id in DeckId.entries) {
-            if (!mix.foreground) {
-                reloadJobs.remove(id)?.cancel()
-                reloadAttempted.remove(id)
-                continue
-            }
-            val d = mix.deck(id)
-            if (reloadJobs[id]?.isActive == true || d.loading) continue
-            val pending = d.pendingRestore
-            val entry = pending?.source ?: d.source?.takeIf { d.audioReleased } ?: continue
-            val key: Any = pending ?: entry
-            if (reloadAttempted[id] == key) continue // já tentou (e falhou); espera mudar algo
-            reloadAttempted[id] = key
-            val deck = session.deck(id)
-            deck.startLoading(entry.name)
-            reloadJobs[id] = viewModelScope.launch {
-                try {
-                    val track = library.decode(entry, deck::updateLoadProgress)
-                    if (pending != null) deck.applyRestore(track, pending) else deck.restoreAudio(track)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (pending != null) deck.dropRestore()
-                    showNotice("Não consegui recarregar ${entry.name}: ${e.message}")
-                } finally {
-                    if (deck.state.loadingName == entry.name) deck.cancelLoading()
-                }
+        for (id in DeckId.entries) reloadDeckIfNeeded(id, mix)
+    }
+
+    // decodificar pode lançar qualquer coisa (codec, arquivo, permissão): vira mensagem para o usuário
+    @Suppress("TooGenericExceptionCaught")
+    private fun reloadDeckIfNeeded(id: DeckId, mix: MixState) {
+        if (!mix.foreground) {
+            reloadJobs.remove(id)?.cancel()
+            reloadAttempted.remove(id)
+            return
+        }
+        val d = mix.deck(id)
+        if (reloadJobs[id]?.isActive == true || d.loading) return
+        val pending = d.pendingRestore
+        val entry = pending?.source ?: d.source?.takeIf { d.audioReleased } ?: return
+        val key: Any = pending ?: entry
+        if (reloadAttempted[id] == key) return // já tentou (e falhou); espera mudar algo
+        reloadAttempted[id] = key
+        val deck = session.deck(id)
+        deck.startLoading(entry.name)
+        reloadJobs[id] = viewModelScope.launch {
+            try {
+                val track = library.decode(entry, deck::updateLoadProgress)
+                if (pending != null) deck.applyRestore(track, pending) else deck.restoreAudio(track)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (pending != null) deck.dropRestore()
+                showNotice("Não consegui recarregar ${entry.name}: ${e.message}")
+            } finally {
+                if (deck.state.loadingName == entry.name) deck.cancelLoading()
             }
         }
     }

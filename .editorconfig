@@ -1,0 +1,21 @@
+# Estilo do código (lido pelo ktlint e pelas IDEs)
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+max_line_length = 140
+# estilo próximo ao padrão do Android Studio/IntelliJ
+ktlint_code_style = intellij_idea
+# funções @Composable têm nome em PascalCase por convenção
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Desligadas por conflitarem com o estilo adotado: parâmetros de funções/classes um por linha (padrão do
+# Compose, com vírgula final) mesmo quando caberiam numa linha, e `when` sem linhas em branco.
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled

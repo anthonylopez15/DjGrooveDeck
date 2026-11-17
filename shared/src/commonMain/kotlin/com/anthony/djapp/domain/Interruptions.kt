@@ -42,7 +42,10 @@ object InterruptionPolicy {
         // pedido explícito: pausa e guarda mesmo que já estivesse parado; não precisa avisar
         Interruption.PauseRequested -> InterruptionReaction(pauseAll = true, persist = true, notify = false)
         else ->
-            if (anyPlaying) InterruptionReaction(pauseAll = true, persist = true, notify = true)
-            else InterruptionReaction(pauseAll = false, persist = false, notify = false)
+            if (anyPlaying) {
+                InterruptionReaction(pauseAll = true, persist = true, notify = true)
+            } else {
+                InterruptionReaction(pauseAll = false, persist = false, notify = false)
+            }
     }
 }

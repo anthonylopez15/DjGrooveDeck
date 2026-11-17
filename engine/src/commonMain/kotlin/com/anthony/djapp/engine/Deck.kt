@@ -15,16 +15,22 @@ import kotlin.math.ceil
 class Deck(private val outRate: Int) {
     @Volatile var track: Track? = null
         private set
+
     @Volatile var playing: Boolean = false
         private set
+
     @Volatile var positionFrames: Double = 0.0
         private set
 
     /** 1.0 = velocidade original. */
     @Volatile var tempo: Double = 1.0
+
     @Volatile var volume: Float = 1f
+
     @Volatile var lowDb: Double = 0.0
+
     @Volatile var midDb: Double = 0.0
+
     @Volatile var highDb: Double = 0.0
 
     /** Mantém o tom ao mudar o tempo (time-stretch). */
@@ -38,6 +44,7 @@ class Deck(private val outRate: Int) {
     private class SeekRequest(val frame: Double)
 
     @Volatile private var seekRef: SeekRequest? = null
+
     @Volatile private var appliedSeek: SeekRequest? = null
     private val eq = Eq3(outRate)
     private var lastGain = 0f
@@ -86,7 +93,8 @@ class Deck(private val outRate: Int) {
      */
     fun dropStaleStretchSource() {
         val t = track
-        if (stretchSource != null && stretchSource !== t && (t == null || t.released)) {
+        val trackHasNoAudio = t == null || t.released
+        if (stretchSource != null && stretchSource !== t && trackHasNoAudio) {
             stretcher.setSource(ShortArray(0))
             stretchSource = null
             stretchActive = false

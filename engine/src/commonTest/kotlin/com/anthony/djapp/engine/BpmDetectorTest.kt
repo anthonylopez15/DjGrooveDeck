@@ -96,7 +96,8 @@ class BpmDetectorTest {
         val tone = ShortArray(rate * 2 * 30)
         for (i in 0 until rate * 30) {
             val s = (sin(2 * PI * 440 * i / rate) * 0.5 * 32767).toInt().toShort()
-            tone[2 * i] = s; tone[2 * i + 1] = s
+            tone[2 * i] = s
+            tone[2 * i + 1] = s
         }
         assertNull(BpmDetector.detect(tone, rate), "tom contínuo")
 
@@ -107,6 +108,6 @@ class BpmDetectorTest {
     fun trackExposesBeatGrid() {
         val t = Track("clicks", rate, clickTrack(120.0, 30.0, 0.0))
         assertNotNull(t.beatGrid)
-        assertEquals(120.0, t.beatGrid!!.bpm, 0.2)
+        assertEquals(120.0, t.beatGrid.bpm, 0.2)
     }
 }

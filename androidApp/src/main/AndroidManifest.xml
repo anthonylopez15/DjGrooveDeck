@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- música em segundo plano: serviço em primeiro plano do tipo reprodução de mídia -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -13,7 +14,10 @@
         android:icon="@android:drawable/ic_media_play"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        <!-- Retrato de propósito: o layout é de celular em pé. Tablet/paisagem está no roadmap
+             (docs/DESENVOLVIMENTO.md); no Android 16+ telas grandes ignoram esta trava. -->
         <activity
+            tools:ignore="LockedOrientationActivity,DiscouragedApi"
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"

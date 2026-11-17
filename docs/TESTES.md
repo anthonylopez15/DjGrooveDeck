@@ -2,6 +2,8 @@
 
 ## Executar
 
+Tudo de uma vez (lint + testes + Android Lint + compilação comum do iOS): `./gradlew checkAll`.
+
 ```bash
 ./gradlew :engine:jvmTest                                  # motor, na JVM (rápido)
 ./gradlew :shared:testAndroidHostTest                       # lógica do controller/SYNC

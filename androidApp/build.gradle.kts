@@ -15,6 +15,12 @@ android {
         versionName = "0.1.0"
     }
 
+    lint {
+        // aviso novo é erro; o que já existia (targetSdk 36) está na baseline, até ser tratado
+        warningsAsErrors = true
+        baseline = file("lint-baseline.xml")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

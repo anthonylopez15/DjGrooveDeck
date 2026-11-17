@@ -1,0 +1,34 @@
+# Ajustes sobre a configuração padrão do detekt (--build-upon-default-config).
+# Só o que é convenção deste projeto; o resto segue o padrão. Problemas que já existiam e não valem
+# refatorar agora estão em config/detekt/baseline.xml (só problemas novos falham).
+
+naming:
+  FunctionNaming:
+    # funções @Composable têm nome em PascalCase
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    # cores e constantes de tela em PascalCase (convenção do Compose) ou SCREAMING_CASE
+    constantPattern: '[A-Z][_A-Za-z0-9]*'
+
+style:
+  MaxLineLength:
+    # igual ao .editorconfig (ktlint)
+    maxLineLength: 140
+  ReturnCount:
+    # `?: return` no início (guarda) é Kotlin idiomático
+    excludeGuardClauses: true
+    max: 3
+  MagicNumber:
+    # DSP e desenho usam muitas constantes numéricas com significado local; os testes cobrem os valores
+    active: false
+
+complexity:
+  LongParameterList:
+    # composables recebem muitos parâmetros por convenção (estado + callbacks + modifier)
+    ignoreAnnotated: ['Composable']
+  LongMethod:
+    excludes: ['**/commonTest/**', '**/androidHostTest/**', '**/jvmTest/**']
+  CyclomaticComplexMethod:
+    excludes: ['**/commonTest/**', '**/androidHostTest/**', '**/jvmTest/**']
+  NestedBlockDepth:
+    excludes: ['**/commonTest/**', '**/androidHostTest/**', '**/jvmTest/**']

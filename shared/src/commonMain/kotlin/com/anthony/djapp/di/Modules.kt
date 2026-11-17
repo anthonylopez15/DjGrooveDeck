@@ -7,11 +7,9 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
-/**
- * Injeção de dependências (ADR 0001, regra 7). Comum a Android e iOS; cada plataforma fornece o
- * [platformModule] com as implementações das portas do domínio e o motor de áudio:
- * `DjMixer`, `AudioSystem`, `SessionStore` e `TrackRepository`.
- */
+// Injeção de dependências (ADR 0001, regra 7). Comum a Android e iOS; cada plataforma fornece o
+// platformModule com as implementações das portas do domínio e o motor de áudio:
+// DjMixer, AudioSystem, SessionStore e TrackRepository.
 
 /** A sessão de áudio: uma por processo (continua tocando sem a tela). */
 val sessionModule = module {

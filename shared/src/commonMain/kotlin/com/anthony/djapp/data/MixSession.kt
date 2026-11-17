@@ -190,7 +190,8 @@ class MixSession(
         val o = deck(id.other)
         val decision = SyncRules.togglePlay(me.view(), o.view())
         val ms = me.state
-        if (decision != PlayDecision.Pause && ms.hasTrack && !ms.audioReleased && !audio.requestPlayback()) {
+        val startsWithAudio = decision != PlayDecision.Pause && ms.hasTrack && !ms.audioReleased
+        if (startsWithAudio && !audio.requestPlayback()) {
             interrupt(Interruption.PlaybackDenied)
             return
         }
@@ -342,7 +343,10 @@ class DeckSession internal constructor(
     /** Estado para guardar em disco; null se não há faixa com origem conhecida. */
     fun snapshot(): DeckSnapshot? {
         val s = state
-        s.pendingRestore?.let { return it } // ainda não recarregado: guarda o que veio do disco
+        return s.pendingRestore ?: snapshotOfLoaded(s) // ainda não recarregado: guarda o que veio do disco
+    }
+
+    private fun snapshotOfLoaded(s: DeckState): DeckSnapshot? {
         val src = s.source ?: return null
         val t = s.track ?: return null
         return DeckSnapshot(

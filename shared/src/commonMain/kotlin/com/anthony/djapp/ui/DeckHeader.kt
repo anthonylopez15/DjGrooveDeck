@@ -95,7 +95,13 @@ private fun DeckHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 14.sp,
-                    color = if (loadingName != null) color else if (deck.hasTrack) MaterialTheme.colorScheme.onSurface else Idle,
+                    color = if (loadingName != null) {
+                        color
+                    } else if (deck.hasTrack) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        Idle
+                    },
                 )
                 if (loadingName != null) {
                     Text("${(deck.loadProgress * 100).toInt()}%", fontSize = 13.sp, color = color)
@@ -111,7 +117,13 @@ private fun DeckHeader(
                             deck.effectiveBpm?.let { "${formatBpm(it)} BPM" } ?: "-- BPM",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (deck.effectiveBpm == null) Idle else if (bpmMatched) SyncBlue else BpmText,
+                            color = if (deck.effectiveBpm == null) {
+                                Idle
+                            } else if (bpmMatched) {
+                                SyncBlue
+                            } else {
+                                BpmText
+                            },
                         )
                     }
                 }

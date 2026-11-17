@@ -51,7 +51,7 @@ class SessionRestoreTest {
         val d = assertNotNull(SessionSnapshotCodec.decode("v=1\ncrossfader=7\na.id=x\na.name=n\na.tempo=90\na.volume=NaN"))
         assertEquals(1f, d.crossfader)
         assertEquals(16f, d.a!!.tempoPercent)
-        assertEquals(1f, d.a!!.volume)
+        assertEquals(1f, d.a.volume)
     }
 
     @Test

@@ -9,6 +9,7 @@ class DjMixer(val sampleRate: Int) {
 
     /** 0 = só A, 1 = só B. */
     @Volatile var crossfader: Float = 0.5f
+
     @Volatile var masterVolume: Float = 0.8f
 
     /** Key lock nos dois decks: tempo sem mudar o tom. */

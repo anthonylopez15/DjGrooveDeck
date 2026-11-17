@@ -62,7 +62,7 @@ fun LibraryBrowser(
                 library.analyze(f) ?: TrackInfo(0.0, null)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (ignored: Exception) { // arquivo que não analisa: mostra sem BPM
                 TrackInfo(0.0, null)
             }
         }
@@ -75,7 +75,7 @@ fun LibraryBrowser(
                 library.list(current)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (ignored: Exception) { // pasta inacessível: lista vazia
                 emptyList()
             }
             loading = false
@@ -180,8 +180,11 @@ private fun bpmLabel(info: TrackInfo?): String {
 }
 
 private fun durationLabel(info: TrackInfo?): String =
-    if (info == null || info.durationSec <= 0.0) "--:--"
-    else formatTenths((info.durationSec * 10).toInt()).substringBeforeLast('.')
+    if (info == null || info.durationSec <= 0.0) {
+        "--:--"
+    } else {
+        formatTenths((info.durationSec * 10).toInt()).substringBeforeLast('.')
+    }
 
 @Composable
 private fun Centered(text: String) {

@@ -41,7 +41,9 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
             .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
             .build()
         val minBytes = AudioTrack.getMinBufferSize(
-            sampleRate, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_FLOAT,
+            sampleRate,
+            AudioFormat.CHANNEL_OUT_STEREO,
+            AudioFormat.ENCODING_PCM_FLOAT,
         )
         // buffer do track com pelo menos 2 chunks
         val bufferBytes = maxOf(minBytes, chunkFrames * 2 * Float.SIZE_BYTES * 2)
@@ -87,9 +89,9 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
                     at = try {
                         createTrack(chunkFrames).also {
                             it.play()
-                            Log.i(TAG, "saída aberta: ${sampleRate} Hz, ${chunkFrames} frames/bloco, rota ${describe(it.routedDevice)}")
+                            Log.i(TAG, "saída aberta: $sampleRate Hz, $chunkFrames frames/bloco, rota ${describe(it.routedDevice)}")
                         }
-                    } catch (e: Exception) {
+                    } catch (ignored: Exception) { // sem saída agora: tenta de novo abaixo
                         null
                     }
                     if (at == null) { // sem saída agora (ex.: o fone saiu): tenta de novo logo

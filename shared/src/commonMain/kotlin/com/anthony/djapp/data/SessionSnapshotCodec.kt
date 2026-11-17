@@ -59,7 +59,7 @@ object SessionSnapshotCodec {
                 master = m.float("master", 0.8f).coerceIn(0f, 1f),
                 keyLock = m["keyLock"]?.toBooleanStrictOrNull() ?: true,
             )
-        } catch (e: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) { // estado corrompido: começa do zero
             null
         }
     }

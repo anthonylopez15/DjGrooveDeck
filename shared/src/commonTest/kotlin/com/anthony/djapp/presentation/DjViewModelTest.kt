@@ -12,14 +12,6 @@ import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,6 +22,14 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** ViewModel da tela principal: ações viram estado, biblioteca, avisos e recarga do arquivo. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -120,7 +120,12 @@ class DjViewModelTest {
     @Test
     fun pickingATrackLoadsItIntoTheTargetDeck() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>()
-        val r = rig(FakeLibrary { gate.await(); track(it.name) })
+        val r = rig(
+            FakeLibrary {
+                gate.await()
+                track(it.name)
+            },
+        )
         r.vm.onAction(DjAction.OpenLibrary(DeckId.B))
         r.vm.onAction(DjAction.PickTrack(entryA))
 
@@ -163,7 +168,17 @@ class DjViewModelTest {
     }
 
     private fun snapshotOf(entry: LibraryEntry) = SessionSnapshot(
-        a = DeckSnapshot(entry, positionSec = 5.0, tempoPercent = 2f, tempoBeforeSync = 0f, volume = 0.7f, low = .5f, mid = .5f, high = .5f, syncOn = true),
+        a = DeckSnapshot(
+            entry,
+            positionSec = 5.0,
+            tempoPercent = 2f,
+            tempoBeforeSync = 0f,
+            volume = 0.7f,
+            low = .5f,
+            mid = .5f,
+            high = .5f,
+            syncOn = true,
+        ),
         b = null,
         crossfader = 0.5f,
         master = 0.8f,

@@ -153,7 +153,7 @@ class PlaybackService : Service() {
         fun start(context: Context): Boolean = try {
             context.startForegroundService(Intent(context, PlaybackService::class.java))
             true
-        } catch (e: Exception) {
+        } catch (ignored: Exception) { // o sistema recusou iniciar o serviço
             false
         }
     }

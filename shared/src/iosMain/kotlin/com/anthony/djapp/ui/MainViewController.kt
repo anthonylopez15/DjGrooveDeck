@@ -11,6 +11,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Sem Mac ainda não há projeto Xcode, biblioteca de arquivos nem áudio reais (ver `PlatformModule.ios.kt`).
  * O app Swift chama `initKoin()` ao abrir e mostra `MainViewController()`.
  */
+@Suppress("ktlint:standard:function-naming", "FunctionNaming") // nome que o app Swift usa (convenção do Compose Multiplatform)
 fun MainViewController() = run {
     initKoin()
     ComposeUIViewController {

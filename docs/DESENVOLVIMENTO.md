@@ -30,9 +30,35 @@ O módulo `engine` usa o plugin KMP library do AGP 9 (`com.android.kotlin.multip
 adb shell am start -n com.anthony.djapp/.MainActivity
 ```
 
+### Antes de cada commit
+
+```bash
+./gradlew checkAll       # ktlint + detekt + testes + Android Lint + compilação comum do iOS
+./gradlew ktlintFormat   # corrige a formatação automaticamente
+```
+
+Os builds e testes são feitos só localmente (não há CI). Ferramentas de lint:
+
+| Ferramenta | O que confere | Configuração |
+|---|---|---|
+| **ktlint** 1.8.0 | Formatação | `.editorconfig` (estilo `intellij_idea`, 140 colunas; 3 regras desligadas por conflitarem com o estilo adotado) |
+| **detekt** 1.23.8 | Problemas de código (complexidade, exceções, nomes...) | `config/detekt/detekt.yml` |
+| **Android Lint** (AGP) | Problemas específicos do Android | bloco `lint {}` em `androidApp/build.gradle.kts`; avisos contam como erro |
+
+ktlint e detekt rodam como programas à parte (tarefas `JavaExec` no `build.gradle.kts` da raiz), sem
+plugins Gradle, para não depender da compatibilidade com o AGP/KMP.
+
+**Baselines (débito registrado):** o que já existia quando o lint foi adotado está em
+`config/detekt/baseline.xml` (25 itens: funções longas no DSP e no decodificador, classes grandes da
+sessão, a lista da biblioteca) e em `androidApp/lint-baseline.xml` (targetSdk 36 em vez de 37). Só
+problemas **novos** falham. Ao resolver um item, regrave: `./gradlew detektBaseline` /
+`./gradlew :androidApp:updateLintBaselineDebug`.
+
 ## Convenções
 
 - **Arquitetura:** siga o [ADR 0001](adr/0001-arquitetura.md) (camadas, regras de dependência, nomes, testes).
+- **Lint:** `./gradlew checkAll` limpo antes de commitar. Captura de exceção ampla só nas bordas (I/O,
+  sistema): se for de propósito ignorar, nomeie a variável `ignored` e diga o motivo num comentário.
 
 - Código e comentários em português; **commits e PRs em inglês**.
 - Nada alocado nem bloqueante na thread de áudio. Campos compartilhados com ela são `@Volatile`; mudanças compostas passam por objetos imutáveis publicados de uma vez (ver `SeekRequest`, `AlignRequest`).
@@ -50,6 +76,7 @@ adb shell am start -n com.anthony.djapp/.MainActivity
 ## Roadmap
 
 Ainda não existe:
+- targetSdk 37 (hoje 36; está na baseline do Android Lint): subir exige testar as mudanças de comportamento do Android 17.
 - Layout para paisagem/tablet (hoje a tela é travada em retrato). Obs.: no Android 16+, em telas grandes (tablets, dobráveis abertos) o sistema ignora a trava de orientação.
 - Loops, hotcues, efeitos, histórico de faixas, knobs de filtro e gain.
 - Latência mínima: migrar `AudioTrack` → Oboe (C++/NDK) se a latência incomodar.

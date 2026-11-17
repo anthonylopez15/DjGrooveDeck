@@ -78,7 +78,11 @@ class EngineStressTest {
                     0 -> deck.seekToFraction(rnd(1000) / 1000f)
                     1 -> deck.tempo = rndD(0.84, 1.16)
                     2 -> mixer.keyLock = !mixer.keyLock
-                    3 -> { deck.lowDb = rndD(-30.0, 6.0); deck.midDb = rndD(-30.0, 6.0); deck.highDb = rndD(-30.0, 6.0) }
+                    3 -> {
+                        deck.lowDb = rndD(-30.0, 6.0)
+                        deck.midDb = rndD(-30.0, 6.0)
+                        deck.highDb = rndD(-30.0, 6.0)
+                    }
                     4 -> deck.volume = rnd(101) / 100f
                     5 -> mixer.crossfader = rnd(101) / 100f
                     6 -> mixer.masterVolume = rnd(101) / 100f

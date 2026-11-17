@@ -103,7 +103,7 @@ class SyncTest {
 
         assertFalse(r.c.state.value.locked)
         assertEquals(SyncState.Armed, r.c.state.value.syncState(DeckId.B)) // contorno: ligado, sem travar
-        assertEquals(SyncState.Off, r.c.state.value.syncState(DeckId.A))   // o líder (flag desligada) apaga
+        assertEquals(SyncState.Off, r.c.state.value.syncState(DeckId.A)) // o líder (flag desligada) apaga
         assertEquals(tempo, r.c.b.state.tempoPercent)
         assertTrue(r.c.b.state.syncOn)
     }
@@ -113,9 +113,9 @@ class SyncTest {
         val r = rig()
         r.bothPlaying()
         r.c.toggleSync(DeckId.B)
-        r.c.togglePlay(DeckId.A)       // pausa
+        r.c.togglePlay(DeckId.A) // pausa
         r.c.deck(DeckId.A).seek(0.31f) // e volta noutro ponto
-        r.c.togglePlay(DeckId.A)       // play: largada alinhada
+        r.c.togglePlay(DeckId.A) // play: largada alinhada
         r.settle()
 
         assertTrue(r.c.state.value.locked)
@@ -158,7 +158,7 @@ class SyncTest {
         assertFalse(r.c.a.state.syncOn)
         assertFalse(r.c.b.state.syncOn)
         assertEquals(tempo, r.c.b.state.tempoPercent) // cada um fica como está
-        assertTrue(r.c.state.value.bpmMatched)              // o BPM segue igual (azul)
+        assertTrue(r.c.state.value.bpmMatched) // o BPM segue igual (azul)
         assertEquals(SyncState.Off, r.c.state.value.syncState(DeckId.B))
     }
 

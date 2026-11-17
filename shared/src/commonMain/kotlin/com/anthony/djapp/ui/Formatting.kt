@@ -1,7 +1,5 @@
 package com.anthony.djapp.ui
 
-
-
 // Formatação de números para a tela (funções puras, testadas em FormatTest).
 
 /** Percentual para exibir: 0..1 vira "0%".."100%". */

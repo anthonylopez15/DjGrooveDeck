@@ -60,7 +60,8 @@ class AndroidTrackRepository(
         val tree = folder.id.substringBefore('\n')
         runCatching {
             context.contentResolver.releasePersistableUriPermission(
-                Uri.parse(tree), Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                Uri.parse(tree),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
             )
         }
         val set = (prefs.getStringSet(KEY_TREES, emptySet()) ?: emptySet()) - tree
@@ -82,7 +83,9 @@ class AndroidTrackRepository(
                 DocumentsContract.Document.COLUMN_LAST_MODIFIED,
                 DocumentsContract.Document.COLUMN_SIZE,
             ),
-            null, null, null,
+            null,
+            null,
+            null,
         )?.use { c ->
             while (c.moveToNext()) {
                 val id = c.getString(0)

@@ -25,7 +25,11 @@ object AndroidTrackDecoder {
         val name = displayName(context, uri)
         try {
             val d = decodeRange(
-                context, uri, startUs = 0L, maxSeconds = null, onProgress = onProgress,
+                context,
+                uri,
+                startUs = 0L,
+                maxSeconds = null,
+                onProgress = onProgress,
                 memoryLimitFrames = memoryLimitFrames(),
             ) { ensureActive() }
             onProgress(1f)
@@ -106,7 +110,7 @@ object AndroidTrackDecoder {
             val maxFrames = maxSeconds?.let { (it * sampleRate).toLong() }
             val durationFrames = if (durationUs > 0) (durationUs / 1_000_000.0 * sampleRate).toLong() else 0L
             if (maxSeconds == null && durationFrames > memoryLimitFrames) {
-                throw IllegalStateException(
+                error(
                     "Faixa muito longa para a memória do aparelho (máx. ~${memoryLimitFrames / sampleRate / 60} min)",
                 )
             }
@@ -158,7 +162,7 @@ object AndroidTrackDecoder {
                                 val shorts = buf.order(ByteOrder.nativeOrder()).asShortBuffer()
                                 out.appendInterleaved(shorts, channels)
                                 if (out.frames > memoryLimitFrames) {
-                                    throw IllegalStateException(
+                                    error(
                                         "Faixa muito longa para a memória do aparelho (máx. ~${memoryLimitFrames / sampleRate / 60} min)",
                                     )
                                 }
@@ -203,7 +207,7 @@ object AndroidTrackDecoder {
             for (f in 0 until frames) {
                 val l = src.get()
                 val r = if (channels >= 2) src.get() else l
-                for (c in 2 until channels) src.get() // descarta canais extras
+                repeat(channels - 2) { src.get() } // descarta canais extras (nada se mono/estéreo)
                 data[size++] = l
                 data[size++] = r
             }

@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.edit
 import com.anthony.djapp.data.AndroidAudioSystem
 import com.anthony.djapp.data.AndroidTrackRepository
 import com.anthony.djapp.data.MixSession
@@ -90,7 +91,7 @@ class MainActivity : ComponentActivity() {
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
         val prefs = getSharedPreferences("app", MODE_PRIVATE)
         if (prefs.getBoolean("asked_notifications", false)) return
-        prefs.edit().putBoolean("asked_notifications", true).apply()
+        prefs.edit { putBoolean("asked_notifications", true) }
         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }

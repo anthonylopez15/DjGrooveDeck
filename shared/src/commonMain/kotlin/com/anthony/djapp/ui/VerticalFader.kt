@@ -61,7 +61,7 @@ fun VerticalFader(
         if (ticks >= 2) {
             for (i in 0 until ticks) {
                 val y = thumbH / 2f + usable * i / (ticks - 1)
-                val major = i == 0 || i == ticks - 1 || i == (ticks - 1) / 2 && ticks % 2 == 1
+                val major = i == 0 || i == ticks - 1 || (i == (ticks - 1) / 2 && ticks % 2 == 1)
                 val gap = 6.dp.toPx()
                 val len = (if (major) 13.dp else 8.dp).toPx()
                 val c = if (major) Color(0xFFC3CCD6) else Idle

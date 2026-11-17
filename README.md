@@ -31,6 +31,7 @@ Fluxo de áudio: `AudioOutput` (thread de áudio) → `DjMixer.render()` → `De
 ./gradlew :engine:jvmTest            # testes do DSP (rápido, na JVM)
 ./gradlew :androidApp:assembleDebug  # gera o APK em androidApp/build/outputs/apk/debug/
 ./gradlew :androidApp:installDebug   # instala no aparelho/emulador conectado
+./gradlew checkAll                   # antes de commitar: lint (ktlint, detekt, Android Lint) + testes + iOS comum
 ```
 
 Requer JDK 17+ e Android SDK (`local.properties` com `sdk.dir`, que não vai pro git).
