@@ -27,42 +27,59 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.presentation.DeckMeters
+import com.anthony.djapp.presentation.DeckUiState
+import com.anthony.djapp.presentation.DjAction
+import com.anthony.djapp.presentation.DjUiState
 
 // Cabeçalho: aviso do topo, nome/tempo/BPM de cada deck, botão de carregar e visão geral da onda.
 
 @Composable
 internal fun Header(
-    controller: DjController,
-    browsing: Boolean,
-    target: DeckId,
-    notice: String?,
-    onLoad: (DeckId) -> Unit,
-    onDone: () -> Unit,
+    state: DjUiState,
+    meters: (DeckId) -> DeckMeters,
+    onAction: (DjAction) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
         Box(Modifier.fillMaxWidth().height(36.dp), contentAlignment = Alignment.Center) {
-            if (browsing) {
-                Button(onClick = onDone, contentPadding = ButtonDefaults.ContentPadding) { Text("OK", fontWeight = FontWeight.Bold) }
+            val notice = state.notice
+            if (state.browsing) {
+                Button(onClick = { onAction(DjAction.CloseLibrary) }, contentPadding = ButtonDefaults.ContentPadding) {
+                    Text("OK", fontWeight = FontWeight.Bold)
+                }
             } else if (notice != null) {
                 Text(notice, color = Color(0xFFFACC15), fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DeckHeader(controller.a, DeckAColor, browsing && target == DeckId.A, mirrored = false, { onLoad(DeckId.A) }, Modifier.weight(1f), controller.bpmMatched)
-            DeckHeader(controller.b, DeckBColor, browsing && target == DeckId.B, mirrored = true, { onLoad(DeckId.B) }, Modifier.weight(1f), controller.bpmMatched)
+            for (id in DeckId.entries) {
+                DeckHeader(
+                    deck = state.deck(id),
+                    meters = meters(id),
+                    color = deckColor(id),
+                    selected = state.browsing && state.target == id,
+                    mirrored = id == DeckId.B,
+                    bpmMatched = state.bpmMatched,
+                    onLoad = { onAction(DjAction.OpenLibrary(id)) },
+                    onSeek = { onAction(DjAction.Seek(id, it)) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun DeckHeader(
-    deck: DeckController,
+    deck: DeckUiState,
+    meters: DeckMeters,
     color: Color,
     selected: Boolean,
     mirrored: Boolean,
+    bpmMatched: Boolean,
     onLoad: () -> Unit,
+    onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    bpmMatched: Boolean = false,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -86,7 +103,7 @@ private fun DeckHeader(
                     // tempo restante e, ao lado, o BPM efetivo (visível também na lista de músicas)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "-" + formatTenths(deck.durationTenths - deck.elapsedTenths).substringBeforeLast('.'),
+                            "-" + formatTenths(deck.durationTenths - meters.elapsedTenths).substringBeforeLast('.'),
                             fontSize = 13.sp,
                             color = Idle,
                         )
@@ -114,9 +131,9 @@ private fun DeckHeader(
         } else {
             OverviewWaveform(
                 peaks = deck.track?.peaks ?: FloatArray(0),
-                progress = deck::progress,
+                progress = { meters.progress(deck.durationSec) },
                 color = color,
-                onSeek = deck::seek,
+                onSeek = onSeek,
                 modifier = Modifier.fillMaxWidth().height(24.dp),
             )
         }
@@ -124,7 +141,7 @@ private fun DeckHeader(
 }
 
 @Composable
-private fun LoadButton(color: Color, selected: Boolean, deck: DeckController, onClick: () -> Unit) {
+private fun LoadButton(color: Color, selected: Boolean, deck: DeckUiState, onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         Modifier

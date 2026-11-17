@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.domain.SyncState
+import com.anthony.djapp.presentation.DeckMeters
+import com.anthony.djapp.presentation.DeckUiState
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -114,7 +116,7 @@ fun RestartButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Mo
  * tempo/decorrido/restante. Por enquanto só visual.
  */
 @Composable
-fun Platter(deck: DeckController, color: Color, bpmMatched: Boolean, modifier: Modifier = Modifier) {
+fun Platter(deck: DeckUiState, meters: DeckMeters, color: Color, bpmMatched: Boolean, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val d: Dp = min(maxWidth, maxHeight)
         Box(Modifier.size(d), contentAlignment = Alignment.Center) {
@@ -125,7 +127,7 @@ fun Platter(deck: DeckController, color: Color, bpmMatched: Boolean, modifier: M
                 drawCircle(Groove, r - 1.5f, c, style = Stroke(3f))
                 drawCircle(Color(0xFF151B23), r * 0.72f, c)
                 drawCircle(Groove, r * 0.72f, c, style = Stroke(2f))
-                val ang = (deck.positionSec * 200.0 % 360.0) * PI / 180.0 - PI / 2
+                val ang = (meters.positionSec * 200.0 % 360.0) * PI / 180.0 - PI / 2
                 val on = if (deck.playing) color else Idle
                 drawLine(
                     on,
@@ -146,8 +148,8 @@ fun Platter(deck: DeckController, color: Color, bpmMatched: Boolean, modifier: M
                     fontWeight = FontWeight.Bold,
                 )
                 if (deck.hasTrack) {
-                    Text(formatTenths(deck.elapsedTenths), fontSize = small)
-                    Text("-" + formatTenths(deck.durationTenths - deck.elapsedTenths), fontSize = small, color = Idle)
+                    Text(formatTenths(meters.elapsedTenths), fontSize = small)
+                    Text("-" + formatTenths(deck.durationTenths - meters.elapsedTenths), fontSize = small, color = Idle)
                 } else {
                     Text("--:--", fontSize = small, color = Idle)
                 }

@@ -28,6 +28,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.anthony.djapp.presentation.DeckMeters
+import com.anthony.djapp.presentation.DeckUiState
 import kotlin.math.ceil
 
 private const val VISIBLE_SEC = 6.0
@@ -102,19 +104,22 @@ private fun renderBars(
  */
 @Composable
 fun ScrollingWaveform(
-    deck: DeckController,
+    deck: DeckUiState,
+    meters: DeckMeters,
     color: Color,
     label: String,
+    onScrub: (deltaSec: Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scrub by rememberUpdatedState(onScrub)
     Box(modifier.background(Color(0xFF0D1218))) {
         val track = deck.track
         Canvas(
             Modifier
                 .fillMaxSize()
-                .pointerInput(deck) {
+                .pointerInput(Unit) {
                     detectHorizontalDragGestures { _, dx ->
-                        deck.scrubBySeconds(-dx / size.width * VISIBLE_SEC)
+                        scrub(-dx / size.width * VISIBLE_SEC)
                     }
                 },
         ) {
@@ -124,7 +129,7 @@ fun ScrollingWaveform(
             if (track != null) {
                 val d = track.detail
                 val bucketsPerSec = track.sampleRate.toDouble() / d.framesPerBucket
-                val center = deck.positionSec * bucketsPerSec
+                val center = meters.positionSec * bucketsPerSec
                 val visible = VISIBLE_SEC * bucketsPerSec
                 var x = 0f
                 while (x < w) {
@@ -146,8 +151,8 @@ fun ScrollingWaveform(
             val bpm = deck.bpm
             if (track != null && bpm != null) {
                 val period = 60.0 / bpm
-                val tStart = deck.positionSec - VISIBLE_SEC / 2
-                val tEnd = deck.positionSec + VISIBLE_SEC / 2
+                val tStart = meters.positionSec - VISIBLE_SEC / 2
+                val tEnd = meters.positionSec + VISIBLE_SEC / 2
                 val first = deck.firstBeatSec
                 var n = ceil((tStart - first) / period).toInt().coerceAtLeast(0)
                 while (true) {

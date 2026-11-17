@@ -16,7 +16,7 @@ androidApp ──► shared ──► engine
 | Módulo | Plugin | Alvos | Responsabilidade |
 |---|---|---|---|
 | `engine` | KMP library (`com.android.kotlin.multiplatform.library`) | `jvm()`, Android, `iosArm64`, `iosSimulatorArm64` | DSP e mixagem sem dependência de UI. Interface `AudioOutput`; implementações por plataforma. |
-| `shared` | KMP + Compose Multiplatform | Android, iOS | Telas Compose, `DjController` (estado observável), contrato `Library` (biblioteca de arquivos). |
+| `shared` | KMP + Compose Multiplatform | Android, iOS | Camadas `domain`, `data`, `presentation` e `ui` (ver ADR 0001). |
 | `androidApp` | `com.android.application` | Android | `MainActivity`, `DjSession` (sessão do processo), `PlaybackService`, `AndroidLibrary` (SAF). |
 
 Regra de dependência: `engine` não conhece Compose nem Android (só `androidMain` conhece). `shared` não conhece Android. Tudo que é de plataforma entra por interface (`AudioOutput`, `Library`).
@@ -44,25 +44,36 @@ Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
 | `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±16%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
 | `Interruptions.kt` | `Interruption` (saída desconectada, outro app, temporária, play negado, pausa pedida) e `InterruptionPolicy`: pausar, salvar, avisar. |
 
-O `DjController` monta as fotos (`DeckController.view()` com o estado real do motor; `shownView()` com o estado observável para a tela), pergunta às regras e executa a decisão. A plataforma (`DjSession`) só detecta eventos e chama `controller.onInterruption(...)`.
+A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado real do motor), pergunta às regras e executa a decisão. A plataforma (`DjSession`) só detecta eventos e chama `mix.onInterruption(...)`.
 
-## Fluxo de estado (UI)
+## Fluxo de estado (MVVM + UDF)
 
 ```
-Compose (DjApp) ──► DjController ──► DeckController ──► Deck (motor)
-        ▲                                   │
-        └──── poll() a cada frame ◄─────────┘   (posição, nível, tocando)
+            onAction(DjAction)                       comandos
+Compose ─────────────────────► DjViewModel ─────────────────► MixSession ──► Deck (motor)
+(ui)    ◄───────────────────── (presentation) ◄──────────────── (data)
+          StateFlow<DjUiState>        combine(MixState, ScreenState)
+
+DeckMeters ◄── onFrame() a cada quadro: posição e nível lidos do motor (fora do UiState)
 ```
 
-- `DeckController` espelha o `Deck` em `mutableStateOf` (faixa, tempo, volume, EQ, SYNC, carregamento).
-- `poll()` roda a cada frame de tela e copia posição/nível da thread de áudio para o estado. Posição e nível são lidos só na fase de **desenho** (Canvas), para não recompor a tela 60×/s; textos usam `elapsedTenths` (muda 10×/s).
-- `DjController` guarda o que envolve os dois decks: crossfader, master, key lock e a lógica de SYNC.
+- **`MixSession`** (`data`): a sessão de áudio do processo. Estado imutável em `StateFlow<MixState>`
+  (`DeckState` por deck: faixa, tempo, volume, EQ, SYNC, carregamento, restauração). Executa as
+  decisões do domínio no motor. Vive enquanto o processo vive.
+- **`DjViewModel`** (`presentation`): vive com a tela (sobrevive à recriação da Activity). Junta o
+  estado da sessão com o que é só da tela (aba, biblioteca aberta, avisos, linhas carregando) num
+  `DjUiState` imutável; recebe `DjAction`; carrega faixas e recarrega do arquivo as liberadas/restauradas.
+- **`DeckMeters`** (`presentation`): exceção de desempenho (ADR, regra 5). Posição e nível mudam a
+  cada quadro; ficam em estado Compose próprio, lidos só na fase de desenho; textos usam
+  `elapsedTenths` (10x/s).
+- **Telas** (`ui`): recebem `DjUiState` + `onAction` e não têm regra.
 
 ## Quem é dono de quê (Android)
 
 | Objeto | Vive | Observação |
 |---|---|---|
-| `AndroidAudioOutput`, `DjMixer`, `DjController` | `DjSession.Session` — processo inteiro | Sobrevive à `Activity`. A tela só se liga a eles. |
+| `AndroidAudioOutput`, `DjMixer`, `MixSession`, `AndroidLibrary` | `DjSession.Session` — processo inteiro | Sobrevivem à `Activity`. A tela só se liga a eles. |
+| `DjViewModel` | Escopo da tela (`ViewModelStore` da Activity) | Sobrevive à recriação da Activity; não guarda nada da Activity. |
 | `MainActivity` | Ciclo de vida da tela | `onStart`/`onResume` ligam a saída; `onStop` desliga se nada toca. |
 | `PlaybackService` | Enquanto há música com o app fora da tela | Serviço em primeiro plano; **não** é dono do áudio, só mantém o processo vivo e mostra a notificação. |
 | `AndroidLibrary` | Por `Activity` | Guarda pastas escolhidas (SAF) e cache de análise (BPM/duração). |

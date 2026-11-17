@@ -25,6 +25,7 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
         }
         commonMain.dependencies {
             api(project(":engine"))
@@ -32,6 +33,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(libs.compose.ui)
+            api(libs.lifecycle.viewmodel.compose)
             api(libs.kotlinx.coroutines.core)
         }
     }

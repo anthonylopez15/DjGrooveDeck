@@ -27,10 +27,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.presentation.DjAction
+import com.anthony.djapp.presentation.DjUiState
+import com.anthony.djapp.presentation.Tab
 
 // Rodapé: abas (ONDAS, MIXER, KEY) e transporte (voltar ao início, play, crossfader).
-
-internal enum class Tab(val label: String) { Waves("ONDAS"), Mixer("MIXER") }
 
 @Composable
 internal fun TabBar(selected: Tab, keyLock: Boolean, onToggleKey: () -> Unit, onSelect: (Tab) -> Unit) {
@@ -66,17 +67,17 @@ private fun TabItem(label: String, color: Color, icon: TabIconKind, hPad: Dp, on
 
 /** Voltar ao início e play de cada deck, com o crossfader entre eles. */
 @Composable
-internal fun TransportRow(controller: DjController) {
+internal fun TransportRow(state: DjUiState, onAction: (DjAction) -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(Color(0xFF1A2028)).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        RestartButton(controller.a.hasTrack, { controller.restart(DeckId.A) })
-        PlayButton(controller.a.playing, controller.a.hasTrack, DeckAColor, { controller.togglePlay(DeckId.A) })
-        CrossfaderSlider(controller.crossfader, controller::changeCrossfader, Modifier.weight(1f))
-        PlayButton(controller.b.playing, controller.b.hasTrack, DeckBColor, { controller.togglePlay(DeckId.B) })
-        RestartButton(controller.b.hasTrack, { controller.restart(DeckId.B) })
+        RestartButton(state.a.hasTrack, { onAction(DjAction.Restart(DeckId.A)) })
+        PlayButton(state.a.playing, state.a.hasTrack, DeckAColor, { onAction(DjAction.TogglePlay(DeckId.A)) })
+        CrossfaderSlider(state.crossfader, { onAction(DjAction.ChangeCrossfader(it)) }, Modifier.weight(1f))
+        PlayButton(state.b.playing, state.b.hasTrack, DeckBColor, { onAction(DjAction.TogglePlay(DeckId.B)) })
+        RestartButton(state.b.hasTrack, { onAction(DjAction.Restart(DeckId.B)) })
     }
 }
 

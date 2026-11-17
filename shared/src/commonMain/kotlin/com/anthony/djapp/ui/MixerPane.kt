@@ -23,31 +23,42 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.presentation.DeckMeters
+import com.anthony.djapp.presentation.DeckUiState
+import com.anthony.djapp.presentation.DjAction
+import com.anthony.djapp.presentation.DjUiState
+import com.anthony.djapp.presentation.EqBand
 
 // Aba MIXER: volume, EQ, medidores de nível e master.
 
 /** Fader de volume nas bordas, knobs de EQ de cada lado e medidores de nível ao centro. */
 @Composable
-internal fun MixerPane(controller: DjController, modifier: Modifier = Modifier) {
+internal fun MixerPane(
+    state: DjUiState,
+    meters: (DeckId) -> DeckMeters,
+    onAction: (DjAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val knob = min(maxHeight / 3.7f, 60.dp)
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
-                VolumeFader(controller.a, DeckAColor)
-                EqKnobs(controller.a, DeckAColor, knob)
+                VolumeFader(state.a, DeckAColor, onAction)
+                EqKnobs(state.a, DeckAColor, knob, onAction)
                 Row(Modifier.fillMaxHeight().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LevelMeter(level = { controller.a.level })
-                    LevelMeter(level = { controller.b.level })
+                    LevelMeter(level = { meters(DeckId.A).level })
+                    LevelMeter(level = { meters(DeckId.B).level })
                 }
-                EqKnobs(controller.b, DeckBColor, knob)
-                VolumeFader(controller.b, DeckBColor)
+                EqKnobs(state.b, DeckBColor, knob, onAction)
+                VolumeFader(state.b, DeckBColor, onAction)
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("MASTER", fontSize = 11.sp, color = Idle)
             Slider(
-                value = controller.master,
-                onValueChange = controller::changeMaster,
+                value = state.master,
+                onValueChange = { onAction(DjAction.ChangeMaster(it)) },
                 modifier = Modifier.weight(1f).padding(start = 12.dp),
             )
         }
@@ -55,7 +66,7 @@ internal fun MixerPane(controller: DjController, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun VolumeFader(deck: DeckController, color: Color) {
+private fun VolumeFader(deck: DeckUiState, color: Color, onAction: (DjAction) -> Unit) {
     var dragging by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxHeight()) {
         // mostra a porcentagem enquanto o dedo está no fader e enquanto o volume não for 0
@@ -68,7 +79,7 @@ private fun VolumeFader(deck: DeckController, color: Color) {
         )
         VerticalFader(
             value = deck.volume,
-            onChange = deck::changeVolume,
+            onChange = { onAction(DjAction.ChangeVolume(deck.id, it)) },
             range = 0f..1f,
             color = color,
             resetTo = 1f,
@@ -80,14 +91,21 @@ private fun VolumeFader(deck: DeckController, color: Color) {
 }
 
 @Composable
-private fun EqKnobs(deck: DeckController, color: Color, knob: Dp) {
+private fun EqKnobs(deck: DeckUiState, color: Color, knob: Dp, onAction: (DjAction) -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxHeight(),
     ) {
-        Knob(deck.high, deck::changeHigh, color, "HIGH", knob, readout = ::formatKnobPercent)
-        Knob(deck.mid, deck::changeMid, color, "MID", knob, readout = ::formatKnobPercent)
-        Knob(deck.low, deck::changeLow, color, "LOW", knob, readout = ::formatKnobPercent)
+        for ((band, label) in listOf(EqBand.High to "HIGH", EqBand.Mid to "MID", EqBand.Low to "LOW")) {
+            Knob(
+                deck.eq(band),
+                { onAction(DjAction.ChangeEq(deck.id, band, it)) },
+                color,
+                label,
+                knob,
+                readout = ::formatKnobPercent,
+            )
+        }
     }
 }

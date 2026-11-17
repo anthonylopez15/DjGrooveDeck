@@ -1,4 +1,4 @@
-package com.anthony.djapp.ui
+package com.anthony.djapp.domain
 
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo

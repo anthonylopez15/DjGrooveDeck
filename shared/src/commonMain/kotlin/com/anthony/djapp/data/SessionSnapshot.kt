@@ -1,4 +1,6 @@
-package com.anthony.djapp.ui
+package com.anthony.djapp.data
+
+import com.anthony.djapp.domain.LibraryEntry
 
 /**
  * Estado de um deck que dá para guardar em disco: de onde veio a faixa e como o deck estava.

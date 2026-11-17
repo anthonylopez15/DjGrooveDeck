@@ -14,11 +14,11 @@ import android.content.res.Configuration
 import com.anthony.djapp.engine.AndroidAudioOutput
 import com.anthony.djapp.domain.Interruption
 import com.anthony.djapp.engine.DjMixer
-import com.anthony.djapp.ui.DjController
-import com.anthony.djapp.ui.SessionSnapshot
+import com.anthony.djapp.data.MixSession
+import com.anthony.djapp.data.SessionSnapshot
 
 /**
- * A "sessão" de DJ vive no processo, e não na tela: o mixer, a saída de áudio e o controller (faixas
+ * A "sessão" de DJ vive no processo, e não na tela: o mixer, a saída de áudio e a [MixSession] (faixas
  * carregadas, posições, tempo, SYNC...) continuam existindo quando a Activity sai de cena ou é
  * recriada. A tela só se liga a ela de novo ao voltar, e tudo aparece como estava.
  *
@@ -31,12 +31,15 @@ object DjSession {
     class Session(context: Context) {
         val output = AndroidAudioOutput(context)
         val mixer = DjMixer(output.sampleRate)
-        val controller = DjController(mixer)
+        val mix = MixSession(mixer)
+
+        /** Biblioteca de músicas: vive no processo (a tela e o ViewModel podem ser recriados). */
+        val library = AndroidLibrary(context)
         private val prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
 
         init {
             // processo novo: volta ao que estava (os decks são recarregados quando a tela aparece)
-            SessionSnapshot.decode(prefs.getString(KEY_STATE, null))?.let(controller::restore)
+            SessionSnapshot.decode(prefs.getString(KEY_STATE, null))?.let(mix::restore)
 
             // A plataforma só detecta e repassa; o que fazer é decidido no domínio (InterruptionPolicy).
 
@@ -45,7 +48,7 @@ object DjSession {
                 interrupt(if (transient) Interruption.Transient else Interruption.OtherAppPlaying)
             }
             // Antes de tocar: pede o foco e liga a saída de áudio (que fica desligada com tudo parado)
-            controller.playbackGate = {
+            mix.playbackGate = {
                 focus.request().also { granted ->
                     if (granted) output.start(mixer) else interrupt(Interruption.PlaybackDenied)
                 }
@@ -82,7 +85,7 @@ object DjSession {
         }
 
         private fun releaseIdleAudio() {
-            controller.releaseIdleAudio()
+            mix.releaseIdleAudio()
             // com a thread de áudio parada ninguém mais solta o PCM que o key lock segurava: solta aqui
             if (!output.running) mixer.dropStaleAudio()
         }
@@ -119,7 +122,7 @@ object DjSession {
 
         /** Repassa um evento de fora da tela ao domínio e guarda o estado se a reação pedir. */
         fun interrupt(kind: Interruption) {
-            if (controller.onInterruption(kind).persist) save()
+            if (mix.onInterruption(kind).persist) save()
         }
 
         /** Pausa os dois decks (botão "Pausar" da notificação, fim do serviço) e guarda o estado. */
@@ -127,7 +130,7 @@ object DjSession {
 
         /** Guarda o estado em disco (assíncrono, barato). Chamar na thread principal. */
         fun save() {
-            prefs.edit().putString(KEY_STATE, controller.snapshot().encode()).apply()
+            prefs.edit().putString(KEY_STATE, mix.snapshot().encode()).apply()
         }
     }
 

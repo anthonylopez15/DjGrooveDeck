@@ -1,6 +1,7 @@
-package com.anthony.djapp.ui
+package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Track
@@ -21,9 +22,9 @@ class SessionRestoreTest {
     private fun track(name: String, bpm: Double) =
         Track(name, rate, ShortArray(rate * 2 * 40), beatGrid = BeatGrid(bpm, 0.2))
 
-    private fun settle(mixer: DjMixer, c: DjController) {
+    private fun settle(mixer: DjMixer, c: MixSession) {
         mixer.render(FloatArray(2 * 512), 512)
-        c.poll()
+        c.syncFromEngine()
     }
 
     @Test
@@ -55,7 +56,7 @@ class SessionRestoreTest {
     fun controllerStateSurvivesANewProcess() {
         // "processo 1": duas faixas, ajustes, SYNC e posição
         val m1 = DjMixer(rate)
-        val c1 = DjController(m1)
+        val c1 = MixSession(m1)
         assertTrue(c1.loadTrack(DeckId.A, track("A", 124.0), entryA))
         assertTrue(c1.loadTrack(DeckId.B, track("B", 128.0), entryB))
         c1.a.changeTempo(2.5f)
@@ -71,14 +72,14 @@ class SessionRestoreTest {
 
         // "processo 2": sessão nova lendo o texto guardado
         val m2 = DjMixer(rate)
-        val c2 = DjController(m2)
+        val c2 = MixSession(m2)
         c2.restore(assertNotNull(SessionSnapshot.decode(saved)))
-        assertEquals(0.25f, c2.crossfader)
-        assertEquals(0.6f, c2.master)
-        assertFalse(c2.keyLock)
-        val pa = assertNotNull(c2.a.pendingRestore)
-        val pb = assertNotNull(c2.b.pendingRestore)
-        assertFalse(c2.a.hasTrack, "a faixa só volta depois de recarregar do arquivo")
+        assertEquals(0.25f, c2.state.value.crossfader)
+        assertEquals(0.6f, c2.state.value.master)
+        assertFalse(c2.state.value.keyLock)
+        val pa = assertNotNull(c2.a.state.pendingRestore)
+        val pb = assertNotNull(c2.b.state.pendingRestore)
+        assertFalse(c2.a.state.hasTrack, "a faixa só volta depois de recarregar do arquivo")
         // antes de recarregar, guardar de novo não perde nada
         assertEquals(saved, c2.snapshot().encode())
 
@@ -86,36 +87,36 @@ class SessionRestoreTest {
         assertTrue(c2.a.applyRestore(track("A", 124.0), pa))
         assertTrue(c2.b.applyRestore(track("B", 128.0), pb))
         settle(m2, c2)
-        assertNull(c2.a.pendingRestore)
-        assertEquals(entryA, c2.a.source)
-        assertEquals(2.5f, c2.a.tempoPercent)
-        assertEquals(0.6f, c2.a.volume)
-        assertEquals(0.2f, c2.a.low)
-        assertTrue(c2.b.syncOn)
-        assertFalse(c2.a.playing, "volta pausado")
+        assertNull(c2.a.state.pendingRestore)
+        assertEquals(entryA, c2.a.state.source)
+        assertEquals(2.5f, c2.a.state.tempoPercent)
+        assertEquals(0.6f, c2.a.state.volume)
+        assertEquals(0.2f, c2.a.state.low)
+        assertTrue(c2.b.state.syncOn)
+        assertFalse(c2.a.state.playing, "volta pausado")
         assertTrue(abs(c2.a.positionSec - c1.a.positionSec) < 0.01, "posição ${c2.a.positionSec} vs ${c1.a.positionSec}")
         assertFalse(m2.keyLock)
         assertFalse(m2.deckA.keyLock)
 
         // desligar o SYNC restaurado devolve o tempo de antes de sincronizar
         c2.toggleSync(DeckId.B)
-        assertEquals(0f, c2.b.tempoPercent)
+        assertEquals(0f, c2.b.state.tempoPercent)
     }
 
     @Test
     fun loadingAnotherTrackCancelsPendingRestore() {
-        val c = DjController(DjMixer(rate))
+        val c = MixSession(DjMixer(rate))
         c.restore(SessionSnapshot(DeckSnapshot(entryA, 5.0, 0f, 0f, 1f, .5f, .5f, .5f, false), null, .5f, .8f, true))
-        val pending = assertNotNull(c.a.pendingRestore)
+        val pending = assertNotNull(c.a.state.pendingRestore)
         assertTrue(c.loadTrack(DeckId.A, track("Outra", 120.0), entryB))
-        assertNull(c.a.pendingRestore)
+        assertNull(c.a.state.pendingRestore)
         assertFalse(c.a.applyRestore(track("A", 124.0), pending), "recarga atrasada não sobrescreve a escolha do usuário")
-        assertEquals(entryB, c.a.source)
+        assertEquals(entryB, c.a.state.source)
     }
 
     @Test
     fun trackWithoutSourceIsNotSaved() {
-        val c = DjController(DjMixer(rate))
+        val c = MixSession(DjMixer(rate))
         c.loadTrack(DeckId.A, track("A", 124.0))
         assertNull(c.snapshot().a)
     }

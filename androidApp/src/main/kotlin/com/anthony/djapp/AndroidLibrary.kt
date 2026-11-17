@@ -7,8 +7,8 @@ import android.provider.DocumentsContract
 import com.anthony.djapp.engine.AndroidTrackDecoder
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
-import com.anthony.djapp.ui.Library
-import com.anthony.djapp.ui.LibraryEntry
+import com.anthony.djapp.domain.Library
+import com.anthony.djapp.domain.LibraryEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +22,6 @@ import kotlinx.coroutines.withContext
  */
 class AndroidLibrary(
     private val context: Context,
-    private val launchFolderPicker: () -> Unit,
 ) : Library {
     private val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
     private val _folders = MutableStateFlow(readFolders())
@@ -47,7 +46,15 @@ class AndroidLibrary(
         _folders.value = readFolders()
     }
 
-    override fun requestAddFolder() = launchFolderPicker()
+    /**
+     * Abre o seletor de pastas. Quem fornece é a Activity à vista (registra no onCreate e devolve no
+     * onDestroy): a biblioteca vive no processo e não pode segurar uma Activity já destruída.
+     */
+    @Volatile var folderPicker: (() -> Unit)? = null
+
+    override fun requestAddFolder() {
+        folderPicker?.invoke()
+    }
 
     override fun removeFolder(folder: LibraryEntry) {
         val tree = folder.id.substringBefore('\n')

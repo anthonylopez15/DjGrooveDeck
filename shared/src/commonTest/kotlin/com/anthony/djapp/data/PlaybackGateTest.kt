@@ -1,4 +1,4 @@
-package com.anthony.djapp.ui
+package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.engine.BeatGrid
@@ -16,7 +16,7 @@ class PlaybackGateTest {
 
     @Test
     fun deniedGateBlocksPlay() {
-        val c = DjController(DjMixer(rate))
+        val c = MixSession(DjMixer(rate))
         c.loadTrack(DeckId.A, track())
         c.playbackGate = { false }
         c.togglePlay(DeckId.A)
@@ -25,7 +25,7 @@ class PlaybackGateTest {
 
     @Test
     fun gateIsAskedOnlyWhenStartingARealTrack() {
-        val c = DjController(DjMixer(rate))
+        val c = MixSession(DjMixer(rate))
         var asked = 0
         c.playbackGate = { asked++; true }
         c.togglePlay(DeckId.A) // deck vazio: nada a pedir

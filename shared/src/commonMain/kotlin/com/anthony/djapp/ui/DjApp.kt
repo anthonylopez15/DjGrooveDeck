@@ -1,6 +1,5 @@
 package com.anthony.djapp.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,107 +11,72 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.anthony.djapp.domain.DeckId
-import kotlinx.coroutines.delay
+import com.anthony.djapp.domain.Library
+import com.anthony.djapp.presentation.DjAction
+import com.anthony.djapp.presentation.DjViewModel
+import com.anthony.djapp.presentation.Tab
 
-/** Tela principal: junta cabeçalho, biblioteca, abas e transporte, e cuida dos avisos. */
+/**
+ * Tela principal: lê o estado do [DjViewModel] e repassa as ações. Sem regra nenhuma aqui (ADR 0001).
+ * A [library] é usada só pela lista de arquivos (que ainda fala direto com ela).
+ */
 @Composable
-fun DjApp(controller: DjController, library: Library) {
-    // Posição vinda da thread de áudio, atualizada a cada frame de tela.
-    LaunchedEffect(controller) {
+fun DjApp(viewModel: DjViewModel, library: Library) {
+    // medidores (posição, nível) acompanham a tela quadro a quadro
+    LaunchedEffect(viewModel) {
         while (true) {
             withFrameNanos { }
-            controller.poll()
+            viewModel.onFrame()
         }
     }
 
-    var browsing by remember { mutableStateOf(false) }
-    var target by remember { mutableStateOf(DeckId.A) }
-    var tab by remember { mutableStateOf(Tab.Waves) }
-    var status by remember { mutableStateOf<String?>(null) }
-    var notice by remember { mutableStateOf<String?>(null) }
-    // faixas em carregamento: id do arquivo -> deck de destino (para o preenchimento na lista)
-    val loadingEntries = remember { mutableStateMapOf<String, DeckId>() }
-    val scope = rememberCoroutineScope()
-
-    ReloadDecksFromFiles(controller, library) { notice = it }
-
-    // avisos do sistema (fone desconectado...) entram no mesmo aviso do topo
-    LaunchedEffect(controller.systemNotice) {
-        controller.systemNotice?.let {
-            notice = it
-            controller.systemNotice = null
-        }
-    }
-
-    // aviso curto no topo; some sozinho
-    LaunchedEffect(notice) {
-        if (notice != null) {
-            delay(2500)
-            notice = null
-        }
-    }
+    val state by viewModel.uiState.collectAsState()
+    val onAction = viewModel::onAction
+    val meters = viewModel::meters
 
     MaterialTheme(colorScheme = DjColors) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-                Header(
-                    controller = controller,
-                    browsing = browsing,
-                    target = target,
-                    notice = notice,
-                    onLoad = { id ->
-                        // regra: não troca a faixa de um deck que está tocando
-                        if (!controller.canReplaceTrack(id)) {
-                            notice = mustPauseMessage(id)
-                        } else {
-                            target = id
-                            browsing = true
-                        }
-                    },
-                    onDone = { browsing = false; status = null },
-                )
-                if (browsing) {
-                    TransportRow(controller)
+                Header(state, meters, onAction)
+                if (state.browsing) {
+                    TransportRow(state, onAction)
                     LibraryBrowser(
                         library,
-                        status,
+                        state.libraryStatus,
                         Modifier.weight(1f),
                         rowLoading = { entryId ->
-                            loadingEntries[entryId]?.let { id -> controller.deck(id).loadProgress to deckColor(id) }
+                            state.loadingEntries[entryId]?.let { id -> state.deck(id).loadProgress to deckColor(id) }
                         },
-                    ) { entry ->
-                        scope.loadFromLibrary(controller, library, target, entry, loadingEntries) { status = it }
-                    }
+                    ) { entry -> onAction(DjAction.PickTrack(entry)) }
                 } else {
-                    when (tab) {
+                    when (state.tab) {
                         Tab.Waves -> {
                             Row(
                                 Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                DeckPlatter(controller, DeckId.A, DeckAColor, Modifier.weight(1f))
-                                DeckPlatter(controller, DeckId.B, DeckBColor, Modifier.weight(1f))
+                                for (id in DeckId.entries) {
+                                    DeckPlatter(state, id, meters(id), onAction, Modifier.weight(1f))
+                                }
                             }
-                            WavesPane(controller, Modifier.weight(1.25f))
+                            WavesPane(state, meters, onAction, Modifier.weight(1.25f))
                         }
                         // No mixer as ondas continuam visíveis em cima; os pratos saem.
                         Tab.Mixer -> {
-                            WavesPane(controller, Modifier.weight(0.8f))
-                            MixerPane(controller, Modifier.weight(1.6f))
+                            WavesPane(state, meters, onAction, Modifier.weight(0.8f))
+                            MixerPane(state, meters, onAction, Modifier.weight(1.6f))
                         }
                     }
-                    TabBar(tab, controller.keyLock, controller::toggleKeyLock) { tab = it }
-                    TransportRow(controller)
+                    TabBar(state.tab, state.keyLock, { onAction(DjAction.ToggleKeyLock) }) {
+                        onAction(DjAction.SelectTab(it))
+                    }
+                    TransportRow(state, onAction)
                 }
             }
         }

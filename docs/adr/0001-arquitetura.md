@@ -120,7 +120,11 @@ Cada passo: testes passando, verificação no aparelho e um commit próprio.
 
 1. [x] Este ADR.
 2. [x] Regras do SYNC, play e interrupções → `domain` (`SyncRules`, `InterruptionPolicy`: núcleo funcional — o domínio decide a partir de uma "foto" de cada deck, `DeckView`, e a apresentação executa).
-3. [ ] `DjUiState` + `DjAction` + `DjViewModel` no lugar do `DjController`.
+3. [x] `DjUiState` + `DjAction` + `DjViewModel` no lugar do `DjController`. A sessão virou
+   `data.MixSession` (estado imutável em `StateFlow<MixState>`, sem Compose); posição e nível por
+   quadro em `presentation.DeckMeters` (regra 5). `Library`/`LibraryEntry` foram para o `domain`.
+   Pendente: a lista de arquivos (`LibraryBrowser`) ainda fala direto com a `Library` — terá seu
+   próprio `LibraryViewModel`.
 4. [ ] Portas `TrackRepository`, `SessionStore`, `AudioPlayer`/sessão e detecção de interrupções; implementações Android em `data`.
 5. [ ] Koin; a `DjSession` deixa de montar dependências.
 6. [ ] Separar `Components.kt` por tipo (botões, faders, knobs, ícones).

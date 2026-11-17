@@ -11,21 +11,22 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 
 ## Componentes
 
+Os arquivos abaixo estão em `com.anthony.djapp.ui` e recebem `DjUiState` + `onAction` (sem regra).
+Estado, ações e ViewModel ficam em `presentation` (`DjUiState`, `DjAction`, `DjViewModel`,
+`DeckMeters`); sessão em `data` (`MixSession`, `MixState`, `SessionSnapshot`); regras e o contrato
+`Library` em `domain`.
+
 | Arquivo | Conteúdo |
 |---|---|
-| `DjApp.kt` | Raiz: estado da tela (aba, biblioteca aberta, avisos) e montagem das partes. |
+| `DjApp.kt` | Raiz: lê `DjViewModel.uiState`, repassa ações e chama `onFrame()` a cada quadro. |
 | `Theme.kt` | Cores dos decks e tema escuro (`DjColors`, `deckColor`). |
 | `DeckHeader.kt` | Cabeçalho: aviso do topo, nome/tempo/BPM de cada deck, botão ♫ e visão geral da onda. |
 | `DecksPane.kt` | Aba ONDAS: pratos com SYNC e ondas ampliadas. |
 | `MixerPane.kt` | Aba MIXER: volume, EQ, medidores e master. |
 | `BottomBar.kt` | Abas com ícones (ONDAS, MIXER, KEY) e transporte com o crossfader. |
-| `TrackLoading.kt` | Carregar faixa da biblioteca; recarregar do arquivo faixas liberadas ou restauradas. |
-| `DjController.kt` | `DeckController`, `DjController`, `DeckId`, `SyncState`. |
 | `Components.kt` | `Platter`, `VerticalFader` (com marcas), `Knob`, `LevelMeter`, `SyncButton`, `PlayButton`, `RestartButton`, `TabIcon`, formatação. |
 | `Waveform.kt` | `OverviewWaveform` e `ScrollingWaveform`. |
 | `LibraryBrowser.kt` | Lista com preenchimento de carregamento por linha. |
-| `Library.kt` | Contrato `Library` e `EmptyLibrary`. |
-| `SessionSnapshot.kt` | Estado da sessão para guardar em disco (`DeckSnapshot`, `encode`/`decode`). |
 
 A tela é **travada em retrato** (`android:screenOrientation="portrait"` no manifest): o layout foi pensado para o celular em pé; deitado, os pratos sumiam e o mixer ficava espremido.
 
@@ -60,4 +61,4 @@ Detalhes:
 
 ## Acoplamento com o motor
 
-`DeckController.engineDeck` é `internal` e só o `DjController` o usa (para pedir o alinhamento ao mixer). A UI não toca no motor diretamente.
+Só a `MixSession` toca no motor (`DeckSession.engineDeck` é `internal`). A UI não importa nada do motor além do tipo `Track` usado para desenhar as ondas.

@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (82 testes)
+## Suítes (90 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -21,8 +21,9 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `MixerAlignTest` | Alinhamento na thread de áudio, largada quantizada, fusão de pedidos. |
 | `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio, faixa com key lock liberada com a thread parada. |
 | `EngineStressTest` | Carga: operações aleatórias reproduzíveis (semente fixa) por ~46 s de áudio e muitas buscas com key lock. |
-| `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller, pausa de fora da tela (desfaz o encaixe e a largada pendente). |
-| `SessionRestoreTest` (`shared`) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
+| `SyncTest` (`shared`, sessão) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller, pausa de fora da tela (desfaz o encaixe e a largada pendente). |
+| `SessionRestoreTest` (`shared`, sessão) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
+| `DjViewModelTest` (`shared`, apresentação) | Ações viram estado, biblioteca só com o deck parado, carregar faixa (progresso e erro), avisos que somem, recarga após o processo morrer e após liberar memória, sem repetir sem parar uma recarga que falhou. |
 | `PlaybackGateTest` (`shared`) | O play passa pelo foco de áudio: negado não toca; pausar e deck vazio não pedem. |
 | `SyncRulesTest` (`shared`, domínio) | Regras puras do SYNC e do transporte: BPM igual, travado, tempo do seguidor e limite, decisões de SYNC e de play. |
 | `InterruptionPolicyTest` (`shared`, domínio) | Reação a cada interrupção, tocando e parado. |

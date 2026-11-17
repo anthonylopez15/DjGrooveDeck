@@ -7,7 +7,7 @@ GrooveDeck DJ é um app de DJ (2 decks) em Kotlin Multiplatform + Compose Multip
 | Módulo | O que tem |
 |---|---|
 | `engine` | Motor de áudio em Kotlin puro: `Deck`, `DjMixer`, EQ de 3 bandas (biquads), crossfader de potência constante, `Track`. Saída Android (`AudioTrack`) e decoder (`MediaCodec`) em `androidMain`. |
-| `shared` | UI Compose (`DjApp`) e `DjController` (estado observável). |
+| `shared` | Camadas do [ADR 0001](docs/adr/0001-arquitetura.md): `domain` (regras), `data` (sessão de áudio `MixSession`), `presentation` (`DjViewModel`) e `ui` (Compose). |
 | `androidApp` | `MainActivity`: seletor de arquivos + liga motor e UI. |
 
 Fluxo de áudio: `AudioOutput` (thread de áudio) → `DjMixer.render()` → `Deck.renderAdd()` (resample linear + EQ + ganho) → soma com crossfader → master + soft clip.
