@@ -77,6 +77,8 @@ class AndroidAudioSystem(
 
             override fun onConfigurationChanged(newConfig: Configuration) = Unit
 
+            // obsoleto desde o Android 14, mas ainda chamado em versões anteriores (minSdk 26)
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun onLowMemory() = emit(PlatformEvent.MemoryPressure)
         })
 

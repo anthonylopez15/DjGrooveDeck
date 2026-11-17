@@ -48,6 +48,9 @@ class MixSession(
 
     fun deck(id: DeckId): DeckSession = if (id == DeckId.A) a else b
 
+    /** Algum deck tocando agora (estado real do motor). */
+    val anyPlaying: Boolean get() = a.playingNow || b.playingNow
+
     init {
         // processo novo: volta ao que estava (os decks são recarregados quando a tela aparecer)
         sessionStore.load()?.let(::restore)
@@ -218,7 +221,7 @@ class MixSession(
      * reação é do domínio ([InterruptionPolicy]); devolve-a para a plataforma guardar o estado se pedido.
      */
     fun onInterruption(kind: Interruption): InterruptionReaction {
-        val reaction = InterruptionPolicy.reactTo(kind, a.playingNow || b.playingNow)
+        val reaction = InterruptionPolicy.reactTo(kind, anyPlaying)
         if (reaction.pauseAll) pauseAll()
         if (reaction.notify) noticeFor(kind)?.let { msg -> update { it.copy(notice = msg) } }
         return reaction

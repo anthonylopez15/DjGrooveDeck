@@ -16,6 +16,8 @@
 | compileSdk | 37 (exigido pelo Compose 1.12) |
 | minSdk | 26 |
 | Coroutines | 1.10.2 |
+| Lifecycle (ViewModel KMP) | 2.9.6 |
+| Koin | 4.2.2 |
 
 O módulo `engine` usa o plugin KMP library do AGP 9 (`com.android.kotlin.multiplatform.library`): configuração no bloco `android { }`, testes de host com `withHostTest {}`.
 

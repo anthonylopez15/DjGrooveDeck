@@ -26,6 +26,10 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.koin.test)
+        }
+        androidMain.dependencies {
+            api(libs.koin.android)
         }
         commonMain.dependencies {
             api(project(":engine"))
@@ -34,6 +38,8 @@ kotlin {
             implementation(compose.material3)
             implementation(libs.compose.ui)
             api(libs.lifecycle.viewmodel.compose)
+            api(libs.koin.core)
+            api(libs.koin.compose.viewmodel)
             api(libs.kotlinx.coroutines.core)
         }
     }

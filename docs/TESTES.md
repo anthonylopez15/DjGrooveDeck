@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (95 testes)
+## Suítes (97 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -28,6 +28,8 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `PlatformEventsTest` (`shared`, sessão) | "A plataforma detecta, a sessão decide": restaura do `SessionStore` ao nascer; interrupção tocando pausa, salva e avisa; parado não faz nada; falta de memória só age com a tela fora de cena; pausa pedida sempre salva. |
 | `SyncRulesTest` (`shared`, domínio) | Regras puras do SYNC e do transporte: BPM igual, travado, tempo do seguidor e limite, decisões de SYNC e de play. |
 | `InterruptionPolicyTest` (`shared`, domínio) | Reação a cada interrupção, tocando e parado. |
+| `KoinModulesTest` (`shared`) | Os módulos comuns do Koin montam a sessão (uma só) e o ViewModel (um por tela) com uma plataforma falsa. |
+| `AndroidModulesVerifyTest` (`shared`, host) | O grafo Android completo do Koin tem tudo o que os construtores pedem (pega definição faltando antes de o app abrir). |
 | `ArchitectureTest` (`shared`, host) | O domínio não importa Android, Compose, iOS nem camadas externas (ADR 0001). |
 | `FormatTest` (`shared`) | Porcentagens do volume e dos knobs. |
 

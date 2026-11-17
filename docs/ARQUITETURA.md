@@ -17,7 +17,7 @@ androidApp ──► shared ──► engine
 |---|---|---|---|
 | `engine` | KMP library (`com.android.kotlin.multiplatform.library`) | `jvm()`, Android, `iosArm64`, `iosSimulatorArm64` | DSP e mixagem sem dependência de UI. Interface `AudioOutput`; implementações por plataforma. |
 | `shared` | KMP + Compose Multiplatform | Android, iOS | Camadas `domain`, `data`, `presentation` e `ui` (ver ADR 0001). |
-| `androidApp` | `com.android.application` | Android | `MainActivity`, `PlaybackService` e `DjSession` (só monta as peças). As implementações Android das portas ficam em `shared/androidMain` (`data`). |
+| `androidApp` | `com.android.application` | Android | `GrooveDeckApp` (inicia o Koin), `MainActivity` e `PlaybackService`. As implementações Android das portas ficam em `shared/androidMain` (`data`). |
 
 Regra de dependência: `engine` não conhece Compose nem Android (só `androidMain` conhece). `shared` não conhece Android. Tudo que é de plataforma entra por interface (`AudioOutput`, `Library`).
 
@@ -49,6 +49,18 @@ Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
 
 A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado real do motor), pergunta às regras e executa a decisão. A plataforma (`DjSession`) só detecta eventos e chama `mix.onInterruption(...)`.
 
+## Injeção de dependências (Koin)
+
+| Módulo | Onde | Fornece |
+|---|---|---|
+| `platformModule` | `expect` em `shared/commonMain/di`; `actual` em `androidMain` e `iosMain` | Motor (`AudioOutput`, `DjMixer`) e as portas: `AudioSystem`, `SessionStore`, `TrackRepository`. |
+| `sessionModule` | `shared/commonMain/di` | `MixSession` (`single`: uma por processo). |
+| `presentationModule` | `shared/commonMain/di` | `DjViewModel` (`viewModelOf`: um por tela). |
+| `androidAppModule` | `androidApp` | `ScreenVisibility`. |
+
+Android inicia em `GrooveDeckApp.onCreate`; iOS em `initKoin()`. Telas pegam o ViewModel com
+`koinViewModel()`; Activity e serviço usam `by inject()`.
+
 ## Fluxo de estado (MVVM + UDF)
 
 ```
@@ -75,7 +87,7 @@ DeckMeters ◄── onFrame() a cada quadro: posição e nível lidos do motor 
 
 | Objeto | Vive | Observação |
 |---|---|---|
-| `AndroidAudioOutput`, `DjMixer`, `AndroidAudioSystem`, `MixSession`, `AndroidTrackRepository` | `DjSession.Session` — processo inteiro | Sobrevivem à `Activity`. A tela só se liga a eles. |
+| `AndroidAudioOutput`, `DjMixer`, `AndroidAudioSystem`, `MixSession`, `AndroidTrackRepository` | Koin `single` — processo inteiro | Sobrevivem à `Activity`. A tela só se liga a eles. |
 | `DjViewModel` | Escopo da tela (`ViewModelStore` da Activity) | Sobrevive à recriação da Activity; não guarda nada da Activity. |
 | `MainActivity` | Ciclo de vida da tela | `onStart`/`onResume` ligam a saída; `onStop` desliga se nada toca. |
 | `PlaybackService` | Enquanto há música com o app fora da tela | Serviço em primeiro plano; **não** é dono do áudio, só mantém o processo vivo e mostra a notificação. |

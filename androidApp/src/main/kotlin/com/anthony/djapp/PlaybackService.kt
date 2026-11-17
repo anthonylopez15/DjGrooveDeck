@@ -13,17 +13,24 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import com.anthony.djapp.data.AndroidAudioSystem
+import com.anthony.djapp.data.MixSession
+import com.anthony.djapp.domain.Interruption
+import org.koin.android.ext.android.inject
 
 /**
  * Serviço em primeiro plano que mantém a música tocando quando o app sai da tela.
  *
- * Ele não é dono do áudio (isso é da [DjSession]): serve para o Android não matar o processo e para
+ * Ele não é dono do áudio (isso é da [MixSession]): serve para o Android não matar o processo e para
  * mostrar a notificação, com atalho para abrir o app e para pausar tudo. Ele se encerra sozinho
  * quando o app volta à tela ou quando nenhum deck está tocando; nesse segundo caso também para a
  * saída de áudio, para não gastar bateria à toa.
  */
 class PlaybackService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private val mix: MixSession by inject()
+    private val audioSystem: AndroidAudioSystem by inject()
+    private val screen: ScreenVisibility by inject()
 
     /** Id do último pedido de start: stopSelf(id) é ignorado pelo sistema se chegou outro start depois. */
     private var lastStartId = 0
@@ -38,16 +45,15 @@ class PlaybackService : Service() {
 
     private val watcher = object : Runnable {
         override fun run() {
-            val session = DjSession.get(this@PlaybackService)
             when {
-                DjSession.activityVisible -> {
+                screen.visible -> {
                     keepAudioOnDestroy = true
                     finish()
                 }
-                !session.anyPlaying -> finish()
+                !mix.anyPlaying -> finish()
                 else -> {
                     // tocando em segundo plano: guarda a posição de tempos em tempos, caso o processo morra
-                    if (++ticks % SAVE_EVERY_TICKS == 0) session.save()
+                    if (++ticks % SAVE_EVERY_TICKS == 0) mix.save()
                     handler.postDelayed(this, WATCH_INTERVAL_MS)
                 }
             }
@@ -65,7 +71,7 @@ class PlaybackService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         lastStartId = startId
         keepAudioOnDestroy = false // um novo pedido: o serviço volta a cuidar do áudio
-        if (intent?.action == ACTION_PAUSE_ALL) DjSession.get(this).pauseAll()
+        if (intent?.action == ACTION_PAUSE_ALL) mix.interrupt(Interruption.PauseRequested)
 
         // precisa vir logo: quem chamou startForegroundService() espera isto em poucos segundos
         val notification = buildNotification()
@@ -97,9 +103,8 @@ class PlaybackService : Service() {
         if (!keepAudioOnDestroy) {
             // encerrado com o app fora da tela (nada tocando ou app removido): para tudo, para que a
             // música não volte a tocar sozinha quando o app for aberto de novo
-            val session = DjSession.get(this)
-            session.pauseAll() // também guarda o estado
-            session.stopOutput()
+            mix.interrupt(Interruption.PauseRequested) // também guarda o estado
+            audioSystem.stopOutput()
         }
         super.onDestroy()
     }

@@ -131,6 +131,10 @@ Cada passo: testes passando, verificação no aparelho e um commit próprio.
    memória só fora da tela). Implementações Android em `shared/androidMain/.../data`
    (`AndroidAudioSystem`, `PrefsSessionStore`, `AndroidTrackRepository`, `AudioFocus`); iOS com
    placeholders (`IosAudioSystem`, `InMemorySessionStore`). A `DjSession` Android só monta as peças.
-5. [ ] Koin; a `DjSession` deixa de montar dependências.
+5. [x] Koin 4.2.2: `di.sessionModule` (sessão `single`), `di.presentationModule` (`viewModelOf`)
+   e `platformModule` (`expect`/`actual`: Android em `shared/androidMain`, iOS em `shared/iosMain`).
+   Android inicia em `GrooveDeckApp`; Activity e serviço recebem por `inject()`; a `DjSession` foi
+   removida. Como o Koin monta ao rodar, dois testes validam o grafo antes: `KoinModulesTest`
+   (módulos comuns com plataforma falsa) e `AndroidModulesVerifyTest` (grafo Android completo).
 6. [ ] Separar `Components.kt` por tipo (botões, faders, knobs, ícones).
 7. [x] Teste de arquitetura que falha se o `domain` importar Android/Compose/iOS ou camadas externas (`shared/src/androidHostTest/.../ArchitectureTest.kt`).

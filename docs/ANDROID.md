@@ -5,7 +5,8 @@
 | Classe | Papel |
 |---|---|
 | `MainActivity` | Liga a tela Compose à sessão; controla visibilidade e saída de áudio; pede a permissão de notificação uma vez. |
-| `DjSession` | Monta, uma vez por processo, `AndroidAudioOutput`, `DjMixer`, `AndroidAudioSystem`, `PrefsSessionStore`, `MixSession` e `AndroidTrackRepository`. Sem regra. `activityVisible` indica se a tela está à vista (usado pelo serviço). |
+| `GrooveDeckApp` | `Application`: inicia o Koin (`appModules()` + `androidAppModule`). As peças da sessão são `single` — uma por processo. |
+| `ScreenVisibility` | A tela está à vista (entre `onStart` e `onStop`); o serviço usa para saber quando parar. |
 | `PlaybackService` | Serviço em primeiro plano (`mediaPlayback`) com notificação. |
 | `AndroidTrackRepository` (`shared/androidMain`, `data`) | Porta `TrackRepository`: biblioteca via Storage Access Framework + cache de análise. |
 | `AndroidAudioSystem` (`shared/androidMain`, `data`) | Porta `AudioSystem`: foco de áudio, fone desconectado e falta de memória viram `PlatformEvent`; liga/desliga a saída de áudio. |
@@ -22,7 +23,7 @@ onUserLeaveHint      (início/recentes) se tocando: activityVisible = false e in
 onStop               mix.setForeground(false), salva; se tocando inicia o serviço, senão output.stop()
 ```
 
-**Saída de áudio só quando precisa**: a tela não abre a saída. O play (`AudioSystem.requestPlayback()`, implementado pelo `AndroidAudioSystem`) pede o foco e liga a saída; com os dois decks parados por **5 s** (tela à vista), um vigia na `DjSession` a desliga. Com a saída aberta o sistema considera o app tocando (silêncio) e gasta bateria. O primeiro play depois disso abre o `AudioTrack` de novo (alguns ms). Log: `saída aberta` / `saída fechada` na tag `DjAudio`.
+**Saída de áudio só quando precisa**: a tela não abre a saída. O play (`AudioSystem.requestPlayback()`, implementado pelo `AndroidAudioSystem`) pede o foco e liga a saída; com os dois decks parados por **5 s** (tela à vista), um vigia no `AndroidAudioSystem` a desliga. Com a saída aberta o sistema considera o app tocando (silêncio) e gasta bateria. O primeiro play depois disso abre o `AudioTrack` de novo (alguns ms). Log: `saída aberta` / `saída fechada` na tag `DjAudio`.
 
 - `onUserLeaveHint` é o momento em que o Android ainda permite iniciar o serviço sem restrição; `onStop` fica de reserva (por exemplo, tela desligando).
 - **Serviço**: a cada 400 ms um *watcher* checa: se a tela voltou, o serviço se encerra mantendo o áudio; se nada toca, encerra e desliga a saída. `lastStartId` garante que `stopSelf(id)` não seja ignorado quando chega um novo start. Remover o app dos recentes (`onTaskRemoved`) para tudo.
@@ -31,7 +32,7 @@ onStop               mix.setForeground(false), salva; se tocando inicia o servi�
 
 ## Pausas de fora da tela
 
-Toda pausa que não vem de um botão da tela — ação **Pausar** da notificação, perda do foco de áudio, saída desconectada, fim do serviço — vira uma `Interruption`: o `AndroidAudioSystem` a detecta e emite `PlatformEvent.Interrupted` (a notificação e o serviço chamam `DjSession.pauseAll()` → `MixSession.interrupt(PauseRequested)`), e a `MixSession` a trata; a reação vem do domínio (`InterruptionPolicy`) e, ao pausar, usa `MixSession.pauseAll()`, que pausa os dois decks, desfaz o encaixe de batidas (`phaseLocked`) e descarta uma largada alinhada ainda pendente no mixer (`DjMixer.cancelAlign`); depois o estado é salvo. Pausar o motor direto deixava a sessão achando que as batidas seguiam travadas.
+Toda pausa que não vem de um botão da tela — ação **Pausar** da notificação, perda do foco de áudio, saída desconectada, fim do serviço — vira uma `Interruption`: o `AndroidAudioSystem` a detecta e emite `PlatformEvent.Interrupted` (a notificação e o serviço chamam `MixSession.interrupt(PauseRequested)`), e a `MixSession` a trata; a reação vem do domínio (`InterruptionPolicy`) e, ao pausar, usa `MixSession.pauseAll()`, que pausa os dois decks, desfaz o encaixe de batidas (`phaseLocked`) e descarta uma largada alinhada ainda pendente no mixer (`DjMixer.cancelAlign`); depois o estado é salvo. Pausar o motor direto deixava a sessão achando que as batidas seguiam travadas.
 
 ## Foco de áudio (ligações, outros apps)
 
@@ -44,7 +45,7 @@ Toda pausa que não vem de um botão da tela — ação **Pausar** da notificaç
 
 ## Troca de saída de áudio (fone, Bluetooth)
 
-- **Saída desconectada com música tocando** (fone com fio sai, Bluetooth desliga ou cai): `DjSession` recebe `ACTION_AUDIO_BECOMING_NOISY`, pausa os dois decks, guarda o estado e mostra "Saída de áudio desconectada: música pausada". Sem isso o Android passaria o som para o alto-falante no meio do set.
+- **Saída desconectada com música tocando** (fone com fio sai, Bluetooth desliga ou cai): o `AndroidAudioSystem` recebe `ACTION_AUDIO_BECOMING_NOISY` e emite a interrupção, pausa os dois decks, guarda o estado e mostra "Saída de áudio desconectada: música pausada". Sem isso o Android passaria o som para o alto-falante no meio do set.
 - **Saída conectada**: o próprio Android redireciona o `AudioTrack` aberto; não é preciso recriar. Se uma escrita falhar (`DEAD_OBJECT`), `AndroidAudioOutput` recria o track.
 - **Diagnóstico**: tag `DjAudio` no logcat — taxa, tamanho de bloco e rota ao abrir a saída, cada mudança de rota e cada recriação:
 
@@ -56,7 +57,7 @@ Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desco
 
 ## Biblioteca (SAF)
 
-- A `AndroidTrackRepository` vive no processo (`DjSession`), não na tela: o `DjViewModel` a usa e sobrevive à
+- A `AndroidTrackRepository` vive no processo (`single` no Koin), não na tela: o `DjViewModel` a usa e sobrevive à
   recriação da Activity. O seletor de pastas depende da Activity, então a Activity o **empresta**
   (`library.folderPicker`) no `onCreate` e o devolve no `onDestroy` — a biblioteca nunca segura uma
   Activity destruída.

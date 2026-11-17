@@ -7,15 +7,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.anthony.djapp.data.AndroidAudioSystem
+import com.anthony.djapp.data.AndroidTrackRepository
+import com.anthony.djapp.data.MixSession
 import com.anthony.djapp.presentation.DjViewModel
 import com.anthony.djapp.ui.DjApp
+import org.koin.android.ext.android.inject
+import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
-    private lateinit var session: DjSession.Session
+    // peças do processo, entregues pelo Koin (a tela só se liga a elas)
+    private val mix: MixSession by inject()
+    private val library: AndroidTrackRepository by inject()
+    private val audioSystem: AndroidAudioSystem by inject()
+    private val screen: ScreenVisibility by inject()
 
     private val folderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri != null) session.library.onFolderPicked(uri)
+        if (uri != null) library.onFolderPicked(uri)
     }
 
     // sem esta permissão (Android 13+) a música continua em segundo plano, mas a notificação não aparece
@@ -23,30 +31,27 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // mixer, decks e faixas carregadas ficam na sessão do processo: a tela só se liga a eles
-        session = DjSession.get(this)
         // a biblioteca vive no processo; esta tela só empresta o seletor de pastas enquanto existe
-        session.library.folderPicker = picker
+        library.folderPicker = picker
 
         setContent {
             // o ViewModel sobrevive à recriação da tela; a sessão de áudio, ao processo inteiro
-            val viewModel = viewModel { DjViewModel(session.mix, session.library) }
-            DjApp(viewModel, session.library)
+            DjApp(koinViewModel<DjViewModel>(), library)
         }
         askNotificationPermissionOnce()
     }
 
     override fun onStart() {
         super.onStart()
-        DjSession.activityVisible = true
-        session.mix.setForeground(true)
+        screen.visible = true
+        mix.setForeground(true)
     }
 
     override fun onResume() {
         super.onResume()
         // voltar dos recentes sem que a tela tenha parado (sem onStart): a tela está de novo à vista.
         // A saída de áudio não é ligada aqui: o play a liga (DjController.playbackGate).
-        DjSession.activityVisible = true
+        screen.visible = true
     }
 
     /**
@@ -56,18 +61,18 @@ class MainActivity : ComponentActivity() {
      */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (session.anyPlaying) {
-            DjSession.activityVisible = false // o serviço não pode achar que o app segue na tela
+        if (mix.anyPlaying) {
+            screen.visible = false // o serviço não pode achar que o app segue na tela
             PlaybackService.start(this)
         }
     }
 
     override fun onStop() {
-        DjSession.activityVisible = false
-        session.mix.setForeground(false)
-        session.save()
+        screen.visible = false
+        mix.setForeground(false)
+        mix.save()
         // Tocando: o serviço mantém o app vivo e o áudio ligado. Parado: desliga a saída de áudio.
-        if (!session.anyPlaying || !PlaybackService.start(this)) session.stopOutput()
+        if (!mix.anyPlaying || !PlaybackService.start(this)) audioSystem.stopOutput()
         super.onStop()
     }
 
@@ -76,7 +81,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         // devolve o seletor só se ainda é o desta tela (a nova pode já ter registrado o dela)
-        if (session.library.folderPicker === picker) session.library.folderPicker = null
+        if (library.folderPicker === picker) library.folderPicker = null
         super.onDestroy()
     }
 
