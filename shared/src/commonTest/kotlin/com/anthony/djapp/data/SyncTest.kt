@@ -22,7 +22,7 @@ class SyncTest {
 
     private class Rig {
         val mixer = DjMixer(44100)
-        val c = MixSession(mixer)
+        val c = testSession(mixer)
     }
 
     /** A = 126 BPM, B = 122 BPM, os dois carregados. */

@@ -99,7 +99,7 @@ class PlaybackService : Service() {
             // música não volte a tocar sozinha quando o app for aberto de novo
             val session = DjSession.get(this)
             session.pauseAll() // também guarda o estado
-            session.output.stop()
+            session.stopOutput()
         }
         super.onDestroy()
     }

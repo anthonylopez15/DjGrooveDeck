@@ -1,16 +1,25 @@
 package com.anthony.djapp.presentation
 
-import com.anthony.djapp.data.DeckSnapshot
 import com.anthony.djapp.data.MixSession
-import com.anthony.djapp.data.SessionSnapshot
+import com.anthony.djapp.data.testSession
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.DeckSnapshot
 import com.anthony.djapp.domain.Interruption
-import com.anthony.djapp.domain.Library
 import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.SessionSnapshot
+import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,14 +30,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /** ViewModel da tela principal: ações viram estado, biblioteca, avisos e recarga do arquivo. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -48,7 +49,7 @@ class DjViewModelTest {
     private val entryA = LibraryEntry("t\nA", "A.mp3", false, 1L)
 
     /** Biblioteca falsa: devolve faixas prontas (ou falha) e conta as decodificações. */
-    private class FakeLibrary(private val decodeWith: suspend (LibraryEntry) -> Track) : Library {
+    private class FakeLibrary(private val decodeWith: suspend (LibraryEntry) -> Track) : TrackRepository {
         var decodes = 0
         override val folders: StateFlow<List<LibraryEntry>> = MutableStateFlow(emptyList())
         override fun requestAddFolder() = Unit
@@ -71,7 +72,7 @@ class DjViewModelTest {
         library: FakeLibrary = FakeLibrary { Track(it.name, 44100, ShortArray(44100 * 2 * 20), beatGrid = BeatGrid(124.0, 0.1)) },
         prepare: (MixSession) -> Unit = {},
     ): Rig {
-        val session = MixSession(DjMixer(rate))
+        val session = testSession(DjMixer(rate))
         prepare(session)
         return Rig(session, library, DjViewModel(session, library))
     }

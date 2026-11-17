@@ -1,7 +1,9 @@
 package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.DeckSnapshot
 import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.SessionSnapshot
 import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Track
@@ -36,17 +38,17 @@ class SessionRestoreTest {
             master = 0.7f,
             keyLock = false,
         )
-        assertEquals(s, SessionSnapshot.decode(s.encode()))
+        assertEquals(s, SessionSnapshotCodec.decode(SessionSnapshotCodec.encode(s)))
     }
 
     @Test
     fun corruptOrMissingStateIsIgnored() {
-        assertNull(SessionSnapshot.decode(null))
-        assertNull(SessionSnapshot.decode(""))
-        assertNull(SessionSnapshot.decode("lixo sem formato"))
-        assertNull(SessionSnapshot.decode("v=999\ncrossfader=0.1"))
+        assertNull(SessionSnapshotCodec.decode(null))
+        assertNull(SessionSnapshotCodec.decode(""))
+        assertNull(SessionSnapshotCodec.decode("lixo sem formato"))
+        assertNull(SessionSnapshotCodec.decode("v=999\ncrossfader=0.1"))
         // valores fora da faixa são limitados, não quebram
-        val d = assertNotNull(SessionSnapshot.decode("v=1\ncrossfader=7\na.id=x\na.name=n\na.tempo=90\na.volume=NaN"))
+        val d = assertNotNull(SessionSnapshotCodec.decode("v=1\ncrossfader=7\na.id=x\na.name=n\na.tempo=90\na.volume=NaN"))
         assertEquals(1f, d.crossfader)
         assertEquals(16f, d.a!!.tempoPercent)
         assertEquals(1f, d.a!!.volume)
@@ -56,7 +58,7 @@ class SessionRestoreTest {
     fun controllerStateSurvivesANewProcess() {
         // "processo 1": duas faixas, ajustes, SYNC e posição
         val m1 = DjMixer(rate)
-        val c1 = MixSession(m1)
+        val c1 = testSession(m1)
         assertTrue(c1.loadTrack(DeckId.A, track("A", 124.0), entryA))
         assertTrue(c1.loadTrack(DeckId.B, track("B", 128.0), entryB))
         c1.a.changeTempo(2.5f)
@@ -68,12 +70,12 @@ class SessionRestoreTest {
         c1.changeMaster(0.6f)
         c1.toggleKeyLock()
         settle(m1, c1)
-        val saved = c1.snapshot().encode()
+        val saved = SessionSnapshotCodec.encode(c1.snapshot())
 
         // "processo 2": sessão nova lendo o texto guardado
         val m2 = DjMixer(rate)
-        val c2 = MixSession(m2)
-        c2.restore(assertNotNull(SessionSnapshot.decode(saved)))
+        val c2 = testSession(m2)
+        c2.restore(assertNotNull(SessionSnapshotCodec.decode(saved)))
         assertEquals(0.25f, c2.state.value.crossfader)
         assertEquals(0.6f, c2.state.value.master)
         assertFalse(c2.state.value.keyLock)
@@ -81,7 +83,7 @@ class SessionRestoreTest {
         val pb = assertNotNull(c2.b.state.pendingRestore)
         assertFalse(c2.a.state.hasTrack, "a faixa só volta depois de recarregar do arquivo")
         // antes de recarregar, guardar de novo não perde nada
-        assertEquals(saved, c2.snapshot().encode())
+        assertEquals(saved, SessionSnapshotCodec.encode(c2.snapshot()))
 
         // a tela recarrega os arquivos
         assertTrue(c2.a.applyRestore(track("A", 124.0), pa))
@@ -105,7 +107,7 @@ class SessionRestoreTest {
 
     @Test
     fun loadingAnotherTrackCancelsPendingRestore() {
-        val c = MixSession(DjMixer(rate))
+        val c = testSession(DjMixer(rate))
         c.restore(SessionSnapshot(DeckSnapshot(entryA, 5.0, 0f, 0f, 1f, .5f, .5f, .5f, false), null, .5f, .8f, true))
         val pending = assertNotNull(c.a.state.pendingRestore)
         assertTrue(c.loadTrack(DeckId.A, track("Outra", 120.0), entryB))
@@ -116,7 +118,7 @@ class SessionRestoreTest {
 
     @Test
     fun trackWithoutSourceIsNotSaved() {
-        val c = MixSession(DjMixer(rate))
+        val c = testSession(DjMixer(rate))
         c.loadTrack(DeckId.A, track("A", 124.0))
         assertNull(c.snapshot().a)
     }

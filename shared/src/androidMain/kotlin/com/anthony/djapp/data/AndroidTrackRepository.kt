@@ -1,14 +1,14 @@
-package com.anthony.djapp
+package com.anthony.djapp.data
 
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.engine.AndroidTrackDecoder
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
-import com.anthony.djapp.domain.Library
-import com.anthony.djapp.domain.LibraryEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,9 +20,9 @@ import kotlinx.coroutines.withContext
  *
  * O id de cada item é "<uriDaÁrvore>\n<documentId>".
  */
-class AndroidLibrary(
+class AndroidTrackRepository(
     private val context: Context,
-) : Library {
+) : TrackRepository {
     private val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
     private val _folders = MutableStateFlow(readFolders())
     override val folders: StateFlow<List<LibraryEntry>> = _folders

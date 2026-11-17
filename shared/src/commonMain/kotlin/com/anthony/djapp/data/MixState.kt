@@ -1,6 +1,7 @@
 package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.DeckSnapshot
 import com.anthony.djapp.domain.DeckView
 import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.domain.SyncRules

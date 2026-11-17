@@ -1,4 +1,4 @@
-package com.anthony.djapp
+package com.anthony.djapp.data
 
 import android.content.Context
 import android.media.AudioAttributes
@@ -17,7 +17,7 @@ import android.os.Looper
  * - Perda breve que só pede volume baixo (som de notificação): o próprio Android abaixa o volume e
  *   devolve depois; nada a fazer.
  */
-class AudioFocus(context: Context, private val onLost: (transient: Boolean) -> Unit) {
+internal class AudioFocus(context: Context, private val onLost: (transient: Boolean) -> Unit) {
     private val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     private val request: AudioFocusRequest =

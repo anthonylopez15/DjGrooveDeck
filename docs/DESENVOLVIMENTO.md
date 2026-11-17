@@ -57,5 +57,5 @@ Ainda não existe:
 
 1. Implementar `AudioOutput` com `AVAudioEngine` + `AVAudioSourceNode`, chamando `DjMixer.render`.
 2. Decodificador de faixas (`AVAudioFile`/`AVAssetReader`) que produza `Track`.
-3. Implementar `Library` (seletor de documentos) e passá-la em `MainViewController`.
+3. Implementar as portas do `domain` no iOS: `TrackRepository` (seletor de documentos), `SessionStore` (`NSUserDefaults`) e `AudioSystem` (`AVAudioSession`: interrupções, rota, memória) — hoje `IosAudioSystem` e `InMemorySessionStore` são placeholders.
 4. Criar o projeto Xcode que hospeda `MainViewController`.

@@ -1,146 +1,50 @@
 package com.anthony.djapp
 
-import android.content.BroadcastReceiver
-import android.content.ComponentCallbacks2
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.media.AudioManager
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import android.os.SystemClock
-import android.content.res.Configuration
-import com.anthony.djapp.engine.AndroidAudioOutput
-import com.anthony.djapp.domain.Interruption
-import com.anthony.djapp.engine.DjMixer
+import com.anthony.djapp.data.AndroidAudioSystem
+import com.anthony.djapp.data.AndroidTrackRepository
 import com.anthony.djapp.data.MixSession
-import com.anthony.djapp.data.SessionSnapshot
+import com.anthony.djapp.data.PrefsSessionStore
+import com.anthony.djapp.domain.Interruption
+import com.anthony.djapp.engine.AndroidAudioOutput
+import com.anthony.djapp.engine.DjMixer
 
 /**
- * A "sessão" de DJ vive no processo, e não na tela: o mixer, a saída de áudio e a [MixSession] (faixas
- * carregadas, posições, tempo, SYNC...) continuam existindo quando a Activity sai de cena ou é
- * recriada. A tela só se liga a ela de novo ao voltar, e tudo aparece como estava.
+ * Monta a sessão de DJ do processo (não da tela): saída de áudio, mixer, as implementações Android das
+ * portas do domínio e a [MixSession]. Tudo continua existindo quando a Activity sai de cena ou é
+ * recriada; a tela só se liga de novo ao voltar, e tudo aparece como estava.
  *
+ * Aqui não há regra: o que fazer em interrupções, falta de memória e restauração é da [MixSession].
  * O [PlaybackService] mantém o processo vivo em primeiro plano enquanto há música tocando.
- *
- * Se mesmo assim o sistema encerrar o processo, o estado guardado com [Session.save] volta quando a
- * sessão nasce de novo: as faixas são recarregadas dos arquivos, pausadas, na mesma posição.
  */
 object DjSession {
     class Session(context: Context) {
-        val output = AndroidAudioOutput(context)
-        val mixer = DjMixer(output.sampleRate)
-        val mix = MixSession(mixer)
+        private val output = AndroidAudioOutput(context)
+        private val mixer = DjMixer(output.sampleRate)
+        private val audioSystem = AndroidAudioSystem(context, output, mixer)
+
+        /** A sessão de áudio (restaura o estado guardado ao nascer). */
+        val mix = MixSession(mixer, audioSystem, PrefsSessionStore(context))
 
         /** Biblioteca de músicas: vive no processo (a tela e o ViewModel podem ser recriados). */
-        val library = AndroidLibrary(context)
-        private val prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
-
-        init {
-            // processo novo: volta ao que estava (os decks são recarregados quando a tela aparece)
-            SessionSnapshot.decode(prefs.getString(KEY_STATE, null))?.let(mix::restore)
-
-            // A plataforma só detecta e repassa; o que fazer é decidido no domínio (InterruptionPolicy).
-
-            // Foco de áudio: pedido antes de tocar; perdê-lo é outro app tocando ou uma ligação
-            val focus = AudioFocus(context) { transient ->
-                interrupt(if (transient) Interruption.Transient else Interruption.OtherAppPlaying)
-            }
-            // Antes de tocar: pede o foco e liga a saída de áudio (que fica desligada com tudo parado)
-            mix.playbackGate = {
-                focus.request().also { granted ->
-                    if (granted) output.start(mixer) else interrupt(Interruption.PlaybackDenied)
-                }
-            }
-
-            // Fone saiu ou o Bluetooth caiu: o Android passaria o som para o alto-falante, no meio do set
-            val noisy = object : BroadcastReceiver() {
-                override fun onReceive(c: Context, intent: Intent) {
-                    if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) interrupt(Interruption.OutputDisconnected)
-                }
-            }
-            val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-            if (Build.VERSION.SDK_INT >= 33) {
-                context.registerReceiver(noisy, filter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                context.registerReceiver(noisy, filter)
-            }
-
-            // Em segundo plano o sistema pode pedir memória: solta o PCM dos decks parados (dezenas de MB
-            // cada). Ficam a origem, a posição, o tempo, o SYNC e a onda; ao voltar, recarrega do arquivo.
-            context.registerComponentCallbacks(object : ComponentCallbacks2 {
-                override fun onTrimMemory(level: Int) {
-                    if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND && !activityVisible) {
-                        save() // pedido de memória costuma vir antes de o processo ser encerrado
-                        releaseIdleAudio()
-                    }
-                }
-
-                override fun onConfigurationChanged(newConfig: Configuration) = Unit
-                override fun onLowMemory() {
-                    if (!activityVisible) releaseIdleAudio()
-                }
-            })
-        }
-
-        private fun releaseIdleAudio() {
-            mix.releaseIdleAudio()
-            // com a thread de áudio parada ninguém mais solta o PCM que o key lock segurava: solta aqui
-            if (!output.running) mixer.dropStaleAudio()
-        }
-
-        private val handler = Handler(Looper.getMainLooper())
-        private var idleSince = 0L
-
-        /**
-         * Desliga a saída de áudio depois de [IDLE_STOP_MS] com os dois decks parados: com ela aberta o
-         * sistema considera o app tocando (tocando silêncio) e gasta bateria. O próximo play religa.
-         * Fora da tela quem cuida disso é a Activity/o serviço (desligam na hora, sem música).
-         */
-        private val idleWatcher = object : Runnable {
-            override fun run() {
-                val now = SystemClock.elapsedRealtime()
-                when {
-                    anyPlaying || !output.running -> idleSince = 0L
-                    idleSince == 0L -> idleSince = now
-                    now - idleSince >= IDLE_STOP_MS -> {
-                        output.stop()
-                        idleSince = 0L
-                    }
-                }
-                handler.postDelayed(this, IDLE_CHECK_MS)
-            }
-        }
-
-        init {
-            handler.postDelayed(idleWatcher, IDLE_CHECK_MS)
-        }
+        val library = AndroidTrackRepository(context)
 
         /** Algum deck tocando agora (estado real do motor). */
-        val anyPlaying: Boolean get() = mixer.deckA.playing || mixer.deckB.playing
-
-        /** Repassa um evento de fora da tela ao domínio e guarda o estado se a reação pedir. */
-        fun interrupt(kind: Interruption) {
-            if (mix.onInterruption(kind).persist) save()
-        }
+        val anyPlaying: Boolean get() = mix.a.playingNow || mix.b.playingNow
 
         /** Pausa os dois decks (botão "Pausar" da notificação, fim do serviço) e guarda o estado. */
-        fun pauseAll() = interrupt(Interruption.PauseRequested)
+        fun pauseAll() = mix.interrupt(Interruption.PauseRequested)
 
-        /** Guarda o estado em disco (assíncrono, barato). Chamar na thread principal. */
-        fun save() {
-            prefs.edit().putString(KEY_STATE, mix.snapshot().encode()).apply()
-        }
+        /** Guarda o estado (chamado ao sair da tela e periodicamente pelo serviço). */
+        fun save() = mix.save()
+
+        /** Desliga a saída de áudio já (a tela saiu de cena sem música tocando). */
+        fun stopOutput() = audioSystem.stopOutput()
     }
-
-    private const val KEY_STATE = "state"
-    private const val IDLE_STOP_MS = 5_000L
-    private const val IDLE_CHECK_MS = 1_000L
 
     @Volatile private var session: Session? = null
 
-    /** A tela está visível (entre onStart e onStop da Activity). */
+    /** A tela está visível (entre onStart e onStop da Activity); o serviço usa para saber quando parar. */
     @Volatile var activityVisible: Boolean = false
 
     fun get(context: Context): Session =

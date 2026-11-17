@@ -17,7 +17,7 @@ androidApp ──► shared ──► engine
 |---|---|---|---|
 | `engine` | KMP library (`com.android.kotlin.multiplatform.library`) | `jvm()`, Android, `iosArm64`, `iosSimulatorArm64` | DSP e mixagem sem dependência de UI. Interface `AudioOutput`; implementações por plataforma. |
 | `shared` | KMP + Compose Multiplatform | Android, iOS | Camadas `domain`, `data`, `presentation` e `ui` (ver ADR 0001). |
-| `androidApp` | `com.android.application` | Android | `MainActivity`, `DjSession` (sessão do processo), `PlaybackService`, `AndroidLibrary` (SAF). |
+| `androidApp` | `com.android.application` | Android | `MainActivity`, `PlaybackService` e `DjSession` (só monta as peças). As implementações Android das portas ficam em `shared/androidMain` (`data`). |
 
 Regra de dependência: `engine` não conhece Compose nem Android (só `androidMain` conhece). `shared` não conhece Android. Tudo que é de plataforma entra por interface (`AudioOutput`, `Library`).
 
@@ -41,6 +41,9 @@ Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
 
 | Arquivo | Conteúdo |
 |---|---|
+| `TrackRepository.kt` | Porta da biblioteca (`LibraryEntry`, listar, analisar, decodificar) e `EmptyTrackRepository`. |
+| `SessionSnapshot.kt` | Modelo do estado guardado (`SessionSnapshot`, `DeckSnapshot`) e a porta `SessionStore`. |
+| `AudioSystem.kt` | Porta do sistema de áudio: `requestPlayback()`, `outputRunning` e eventos `PlatformEvent` (interrupção, falta de memória). |
 | `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±16%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
 | `Interruptions.kt` | `Interruption` (saída desconectada, outro app, temporária, play negado, pausa pedida) e `InterruptionPolicy`: pausar, salvar, avisar. |
 
@@ -72,11 +75,10 @@ DeckMeters ◄── onFrame() a cada quadro: posição e nível lidos do motor 
 
 | Objeto | Vive | Observação |
 |---|---|---|
-| `AndroidAudioOutput`, `DjMixer`, `MixSession`, `AndroidLibrary` | `DjSession.Session` — processo inteiro | Sobrevivem à `Activity`. A tela só se liga a eles. |
+| `AndroidAudioOutput`, `DjMixer`, `AndroidAudioSystem`, `MixSession`, `AndroidTrackRepository` | `DjSession.Session` — processo inteiro | Sobrevivem à `Activity`. A tela só se liga a eles. |
 | `DjViewModel` | Escopo da tela (`ViewModelStore` da Activity) | Sobrevive à recriação da Activity; não guarda nada da Activity. |
 | `MainActivity` | Ciclo de vida da tela | `onStart`/`onResume` ligam a saída; `onStop` desliga se nada toca. |
 | `PlaybackService` | Enquanto há música com o app fora da tela | Serviço em primeiro plano; **não** é dono do áudio, só mantém o processo vivo e mostra a notificação. |
-| `AndroidLibrary` | Por `Activity` | Guarda pastas escolhidas (SAF) e cache de análise (BPM/duração). |
 
 Detalhes em [ANDROID.md](ANDROID.md).
 

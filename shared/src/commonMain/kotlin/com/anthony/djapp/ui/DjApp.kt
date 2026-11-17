@@ -17,7 +17,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.anthony.djapp.domain.DeckId
-import com.anthony.djapp.domain.Library
+import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.presentation.DjAction
 import com.anthony.djapp.presentation.DjViewModel
 import com.anthony.djapp.presentation.Tab
@@ -27,7 +27,7 @@ import com.anthony.djapp.presentation.Tab
  * A [library] é usada só pela lista de arquivos (que ainda fala direto com ela).
  */
 @Composable
-fun DjApp(viewModel: DjViewModel, library: Library) {
+fun DjApp(viewModel: DjViewModel, library: TrackRepository) {
     // medidores (posição, nível) acompanham a tela quadro a quadro
     LaunchedEffect(viewModel) {
         while (true) {

@@ -122,10 +122,15 @@ Cada passo: testes passando, verificação no aparelho e um commit próprio.
 2. [x] Regras do SYNC, play e interrupções → `domain` (`SyncRules`, `InterruptionPolicy`: núcleo funcional — o domínio decide a partir de uma "foto" de cada deck, `DeckView`, e a apresentação executa).
 3. [x] `DjUiState` + `DjAction` + `DjViewModel` no lugar do `DjController`. A sessão virou
    `data.MixSession` (estado imutável em `StateFlow<MixState>`, sem Compose); posição e nível por
-   quadro em `presentation.DeckMeters` (regra 5). `Library`/`LibraryEntry` foram para o `domain`.
-   Pendente: a lista de arquivos (`LibraryBrowser`) ainda fala direto com a `Library` — terá seu
+   quadro em `presentation.DeckMeters` (regra 5). `TrackRepository`/`LibraryEntry` foram para o `domain`.
+   Pendente: a lista de arquivos (`LibraryBrowser`) ainda fala direto com o `TrackRepository` — terá seu
    próprio `LibraryViewModel`.
-4. [ ] Portas `TrackRepository`, `SessionStore`, `AudioPlayer`/sessão e detecção de interrupções; implementações Android em `data`.
+4. [x] Portas no `domain`: `TrackRepository` (ex-`Library`), `SessionStore` (estado guardado; formato
+   em `data.SessionSnapshotCodec`) e `AudioSystem` (pedir para tocar + eventos `PlatformEvent`:
+   interrupções e falta de memória). A `MixSession` recebe as portas e decide (pausar, salvar, soltar
+   memória só fora da tela). Implementações Android em `shared/androidMain/.../data`
+   (`AndroidAudioSystem`, `PrefsSessionStore`, `AndroidTrackRepository`, `AudioFocus`); iOS com
+   placeholders (`IosAudioSystem`, `InMemorySessionStore`). A `DjSession` Android só monta as peças.
 5. [ ] Koin; a `DjSession` deixa de montar dependências.
 6. [ ] Separar `Components.kt` por tipo (botões, faders, knobs, ícones).
 7. [x] Teste de arquitetura que falha se o `domain` importar Android/Compose/iOS ou camadas externas (`shared/src/androidHostTest/.../ArchitectureTest.kt`).

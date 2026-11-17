@@ -31,15 +31,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.anthony.djapp.domain.Library
 import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.engine.TrackInfo
 import kotlinx.coroutines.CancellationException
 
 /** Navegador das pastas vinculadas. Tocar numa faixa chama [onPick]. */
 @Composable
 fun LibraryBrowser(
-    library: Library,
+    library: TrackRepository,
     status: String?,
     modifier: Modifier = Modifier,
     rowLoading: (String) -> Pair<Float, Color>? = { null },

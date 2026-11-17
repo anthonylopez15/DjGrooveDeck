@@ -14,7 +14,7 @@ Pacote `com.anthony.djapp.ui`, Compose Multiplatform.
 Os arquivos abaixo estão em `com.anthony.djapp.ui` e recebem `DjUiState` + `onAction` (sem regra).
 Estado, ações e ViewModel ficam em `presentation` (`DjUiState`, `DjAction`, `DjViewModel`,
 `DeckMeters`); sessão em `data` (`MixSession`, `MixState`, `SessionSnapshot`); regras e o contrato
-`Library` em `domain`.
+`TrackRepository` em `domain`.
 
 | Arquivo | Conteúdo |
 |---|---|

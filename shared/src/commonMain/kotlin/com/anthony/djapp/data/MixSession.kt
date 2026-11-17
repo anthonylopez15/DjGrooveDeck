@@ -1,11 +1,16 @@
 package com.anthony.djapp.data
 
+import com.anthony.djapp.domain.AudioSystem
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.DeckSnapshot
 import com.anthony.djapp.domain.Interruption
 import com.anthony.djapp.domain.InterruptionPolicy
 import com.anthony.djapp.domain.InterruptionReaction
 import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.PlatformEvent
 import com.anthony.djapp.domain.PlayDecision
+import com.anthony.djapp.domain.SessionSnapshot
+import com.anthony.djapp.domain.SessionStore
 import com.anthony.djapp.domain.SyncDecision
 import com.anthony.djapp.domain.SyncRules
 import com.anthony.djapp.engine.Deck
@@ -24,8 +29,15 @@ import kotlinx.coroutines.flow.update
  * As decisões (SYNC, play, interrupções) são do domínio ([SyncRules], [InterruptionPolicy]); aqui se
  * executa a decisão no motor e no estado. Métodos que mudam estado devem ser chamados na thread
  * principal, exceto [DeckSession.updateLoadProgress] (o decodificador avisa de outra thread).
+ *
+ * Depende só de portas do domínio para falar com a plataforma: [AudioSystem] (pedir para tocar e
+ * receber eventos) e [SessionStore] (estado guardado entre processos).
  */
-class MixSession(private val mixer: DjMixer) {
+class MixSession(
+    private val mixer: DjMixer,
+    private val audio: AudioSystem,
+    private val sessionStore: SessionStore,
+) {
     private val store = MutableStateFlow(MixState())
 
     /** Estado atual da sessão. */
@@ -36,11 +48,11 @@ class MixSession(private val mixer: DjMixer) {
 
     fun deck(id: DeckId): DeckSession = if (id == DeckId.A) a else b
 
-    /**
-     * Consultado antes de um deck começar a tocar; a plataforma pede o foco de áudio e liga a saída
-     * aqui. false (ex.: durante uma ligação) impede o play. Padrão: sempre pode.
-     */
-    var playbackGate: () -> Boolean = { true }
+    init {
+        // processo novo: volta ao que estava (os decks são recarregados quando a tela aparecer)
+        sessionStore.load()?.let(::restore)
+        audio.setListener(::onPlatformEvent)
+    }
 
     private fun update(f: (MixState) -> MixState) = store.update(f)
 
@@ -73,8 +85,38 @@ class MixSession(private val mixer: DjMixer) {
     /** A apresentação já mostrou o aviso. */
     fun consumeNotice() = update { it.copy(notice = null) }
 
-    /** Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. */
-    fun releaseIdleAudio(): Int = listOf(a, b).count { it.releaseAudio() }
+    /**
+     * Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. Com a saída de
+     * áudio desligada ninguém mais solta o PCM que o key lock segurava: solta aqui também.
+     */
+    fun releaseIdleAudio(): Int {
+        val released = listOf(a, b).count { it.releaseAudio() }
+        if (!audio.outputRunning) mixer.dropStaleAudio()
+        return released
+    }
+
+    /** Guarda o estado no [SessionStore]. */
+    fun save() = sessionStore.save(snapshot())
+
+    /**
+     * Evento detectado pela plataforma ([AudioSystem]). A decisão é daqui (e do domínio), igual em
+     * Android e iOS: interrupções seguem a [InterruptionPolicy]; falta de memória com a tela fora de
+     * cena guarda o estado (o processo pode ser encerrado logo) e solta o áudio dos decks parados.
+     */
+    fun onPlatformEvent(event: PlatformEvent) {
+        when (event) {
+            is PlatformEvent.Interrupted -> interrupt(event.kind)
+            PlatformEvent.MemoryPressure -> if (!store.value.foreground) {
+                save()
+                releaseIdleAudio()
+            }
+        }
+    }
+
+    /** Trata uma interrupção e guarda o estado se a reação pedir. */
+    fun interrupt(kind: Interruption) {
+        if (onInterruption(kind).persist) save()
+    }
 
     /** Estado atual para guardar em disco. */
     fun snapshot(): SessionSnapshot {
@@ -138,14 +180,17 @@ class MixSession(private val mixer: DjMixer) {
 
     /**
      * Play/pause (regras em [SyncRules.togglePlay]). Antes de começar, a plataforma pode negar
-     * ([playbackGate]). Pausar desfaz o encaixe (o SYNC continua ligado, só sem travar).
+     * ([AudioSystem.requestPlayback]). Pausar desfaz o encaixe (o SYNC continua ligado, só sem travar).
      */
     fun togglePlay(id: DeckId) {
         val me = deck(id)
         val o = deck(id.other)
         val decision = SyncRules.togglePlay(me.view(), o.view())
         val ms = me.state
-        if (decision != PlayDecision.Pause && ms.hasTrack && !ms.audioReleased && !playbackGate()) return
+        if (decision != PlayDecision.Pause && ms.hasTrack && !ms.audioReleased && !audio.requestPlayback()) {
+            interrupt(Interruption.PlaybackDenied)
+            return
+        }
         when (decision) {
             PlayDecision.Pause -> {
                 me.pause()

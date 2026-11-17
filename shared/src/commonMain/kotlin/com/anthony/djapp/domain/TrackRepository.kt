@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.StateFlow
 data class LibraryEntry(val id: String, val name: String, val isFolder: Boolean, val stamp: Long = 0L)
 
 /**
- * Biblioteca de músicas do usuário: pastas "vinculadas" que o app lista e carrega.
- * Android: pastas via Storage Access Framework. iOS: a implementar (UIDocumentPicker).
+ * Porta (ADR 0001): a biblioteca de músicas do usuário — pastas "vinculadas" que o app lista, analisa e
+ * decodifica. Android: pastas via Storage Access Framework. iOS: a implementar (UIDocumentPicker).
  */
-interface Library {
+interface TrackRepository {
     /** Pastas raiz vinculadas pelo usuário. */
     val folders: StateFlow<List<LibraryEntry>>
 
@@ -35,7 +35,7 @@ interface Library {
 }
 
 /** Biblioteca vazia, para plataformas sem implementação e para previews. */
-object EmptyLibrary : Library {
+object EmptyTrackRepository : TrackRepository {
     override val folders: StateFlow<List<LibraryEntry>> = MutableStateFlow(emptyList())
     override fun requestAddFolder() = Unit
     override fun removeFolder(folder: LibraryEntry) = Unit

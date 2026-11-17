@@ -6,8 +6,8 @@ import com.anthony.djapp.data.DeckSession
 import com.anthony.djapp.data.MixSession
 import com.anthony.djapp.data.MixState
 import com.anthony.djapp.domain.DeckId
-import com.anthony.djapp.domain.Library
 import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.TrackRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
  */
 class DjViewModel(
     private val session: MixSession,
-    private val library: Library,
+    private val library: TrackRepository,
 ) : ViewModel() {
     private val screen = MutableStateFlow(ScreenState())
 
