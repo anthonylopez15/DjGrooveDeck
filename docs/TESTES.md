@@ -10,7 +10,7 @@
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (66 testes)
+## Suítes (82 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -24,6 +24,9 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `SyncTest` (`shared`) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller, pausa de fora da tela (desfaz o encaixe e a largada pendente). |
 | `SessionRestoreTest` (`shared`) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
 | `PlaybackGateTest` (`shared`) | O play passa pelo foco de áudio: negado não toca; pausar e deck vazio não pedem. |
+| `SyncRulesTest` (`shared`, domínio) | Regras puras do SYNC e do transporte: BPM igual, travado, tempo do seguidor e limite, decisões de SYNC e de play. |
+| `InterruptionPolicyTest` (`shared`, domínio) | Reação a cada interrupção, tocando e parado. |
+| `ArchitectureTest` (`shared`, host) | O domínio não importa Android, Compose, iOS nem camadas externas (ADR 0001). |
 | `FormatTest` (`shared`) | Porcentagens do volume e dos knobs. |
 
 ### Teste de carga do motor

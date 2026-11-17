@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.anthony.djapp.domain.DeckId
 
 // Aba ONDAS: pratos com o botão SYNC e as ondas ampliadas.
 

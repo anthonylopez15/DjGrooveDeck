@@ -35,6 +35,17 @@ thread de áudio (AndroidAudioOutput, prioridade URGENT_AUDIO)
 
 Nada na thread de áudio aloca memória nem toma lock. A UI se comunica com ela apenas por campos `@Volatile` e por objetos imutáveis publicados numa única escrita volátil (ver [MOTOR.md](MOTOR.md), "Threading").
 
+## Domínio (`com.anthony.djapp.domain`)
+
+Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
+
+| Arquivo | Conteúdo |
+|---|---|
+| `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±16%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
+| `Interruptions.kt` | `Interruption` (saída desconectada, outro app, temporária, play negado, pausa pedida) e `InterruptionPolicy`: pausar, salvar, avisar. |
+
+O `DjController` monta as fotos (`DeckController.view()` com o estado real do motor; `shownView()` com o estado observável para a tela), pergunta às regras e executa a decisão. A plataforma (`DjSession`) só detecta eventos e chama `controller.onInterruption(...)`.
+
 ## Fluxo de estado (UI)
 
 ```

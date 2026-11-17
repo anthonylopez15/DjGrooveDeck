@@ -29,7 +29,7 @@ onStop               foreground = false, salva; se tocando inicia o serviço, se
 
 ## Pausas de fora da tela
 
-Toda pausa que não vem de um botão da tela — ação **Pausar** da notificação, perda do foco de áudio, saída desconectada, fim do serviço — passa por `DjSession.pauseAll()` → `DjController.pauseAll()`, que pausa os dois decks, desfaz o encaixe de batidas (`phaseLocked`) e descarta uma largada alinhada ainda pendente no mixer (`DjMixer.cancelAlign`); depois o estado é salvo. Pausar o motor direto deixava o controller achando que as batidas seguiam travadas.
+Toda pausa que não vem de um botão da tela — ação **Pausar** da notificação, perda do foco de áudio, saída desconectada, fim do serviço — vira uma `Interruption` repassada por `DjSession.interrupt()` a `DjController.onInterruption()`; a reação vem do domínio (`InterruptionPolicy`) e, ao pausar, usa `DjController.pauseAll()`, que pausa os dois decks, desfaz o encaixe de batidas (`phaseLocked`) e descarta uma largada alinhada ainda pendente no mixer (`DjMixer.cancelAlign`); depois o estado é salvo. Pausar o motor direto deixava o controller achando que as batidas seguiam travadas.
 
 ## Foco de áudio (ligações, outros apps)
 

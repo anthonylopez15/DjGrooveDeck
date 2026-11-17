@@ -119,9 +119,9 @@ salvo, detecção de interrupções/rota/memória e o modo de segundo plano.
 Cada passo: testes passando, verificação no aparelho e um commit próprio.
 
 1. [x] Este ADR.
-2. [ ] Regras do SYNC, play e interrupções → `domain` (casos de uso/serviço de domínio).
+2. [x] Regras do SYNC, play e interrupções → `domain` (`SyncRules`, `InterruptionPolicy`: núcleo funcional — o domínio decide a partir de uma "foto" de cada deck, `DeckView`, e a apresentação executa).
 3. [ ] `DjUiState` + `DjAction` + `DjViewModel` no lugar do `DjController`.
 4. [ ] Portas `TrackRepository`, `SessionStore`, `AudioPlayer`/sessão e detecção de interrupções; implementações Android em `data`.
 5. [ ] Koin; a `DjSession` deixa de montar dependências.
 6. [ ] Separar `Components.kt` por tipo (botões, faders, knobs, ícones).
-7. [ ] Teste de arquitetura que falha se o `domain` importar Android/Compose.
+7. [x] Teste de arquitetura que falha se o `domain` importar Android/Compose/iOS ou camadas externas (`shared/src/androidHostTest/.../ArchitectureTest.kt`).

@@ -11,7 +11,15 @@ import com.anthony.djapp.engine.Deck
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Eq3
 import com.anthony.djapp.engine.Track
-import kotlin.math.abs
+import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.DeckView
+import com.anthony.djapp.domain.Interruption
+import com.anthony.djapp.domain.InterruptionPolicy
+import com.anthony.djapp.domain.InterruptionReaction
+import com.anthony.djapp.domain.PlayDecision
+import com.anthony.djapp.domain.SyncDecision
+import com.anthony.djapp.domain.SyncRules
+import com.anthony.djapp.domain.SyncState
 
 /** Estado observável (Compose) de um deck, ligado ao [Deck] do motor. */
 class DeckController(private val deck: Deck) {
@@ -76,7 +84,13 @@ class DeckController(private val deck: Deck) {
         private set
 
     /** BPM efetivo, já com o ajuste de tempo. */
-    val effectiveBpm: Double? get() = bpm?.let { it * (1.0 + tempoPercent / 100.0) }
+    val effectiveBpm: Double? get() = shownView().effectiveBpm
+
+    /** "Foto" para as regras decidirem, com o estado real do motor (tocando agora). */
+    internal fun view(): DeckView = DeckView(bpm, tempoPercent, syncOn, playingNow)
+
+    /** "Foto" para o que a tela mostra, com o estado observável (atualizado a cada quadro). */
+    internal fun shownView(): DeckView = DeckView(bpm, tempoPercent, syncOn, playing)
 
     /** Deck seguindo o BPM do outro (SYNC ligado). */
     var syncOn by mutableStateOf(false)
@@ -226,7 +240,7 @@ class DeckController(private val deck: Deck) {
     }
 
     fun changeTempo(p: Float) {
-        tempoPercent = p.coerceIn(-16f, 16f)
+        tempoPercent = p.coerceIn(-SyncRules.MAX_TEMPO_PERCENT, SyncRules.MAX_TEMPO_PERCENT)
         deck.tempo = 1.0 + tempoPercent / 100.0
     }
 
@@ -306,7 +320,6 @@ class DjController(private val mixer: DjMixer) {
     }
 
     fun deck(id: DeckId): DeckController = if (id == DeckId.A) a else b
-    private fun other(id: DeckId): DeckController = if (id == DeckId.A) b else a
 
     /**
      * Encaixe de batidas: true quando as batidas dos dois decks foram alinhadas pelo SYNC.
@@ -314,27 +327,24 @@ class DjController(private val mixer: DjMixer) {
      */
     private var phaseLocked by mutableStateOf(false)
 
+    // As decisões (SYNC, play) são do domínio (SyncRules); aqui só se executa o que elas devolvem.
+
     /** Os dois decks tocando, com SYNC ligado e as batidas travadas: os dois botões ficam cheios. */
     val locked: Boolean
-        get() = phaseLocked && a.playing && b.playing && (a.syncOn || b.syncOn)
+        get() = SyncRules.locked(phaseLocked, a.shownView(), b.shownView())
 
     /** BPM efetivo igual nos dois decks (o número fica azul no prato). */
     val bpmMatched: Boolean
-        get() {
-            val x = a.effectiveBpm ?: return false
-            val y = b.effectiveBpm ?: return false
-            return abs(x - y) < 0.05
-        }
+        get() = SyncRules.bpmMatched(a.shownView(), b.shownView())
 
     /** Aparência do botão SYNC do deck [id]: apagado, contorno (ligado, sem travar) ou cheio (travado). */
-    fun syncState(id: DeckId): SyncState = when {
-        locked -> SyncState.Locked
-        deck(id).syncOn -> SyncState.Armed
-        else -> SyncState.Off
-    }
+    fun syncState(id: DeckId): SyncState = SyncRules.syncState(deck(id).shownView(), locked)
 
     fun canToggleSync(id: DeckId): Boolean =
-        deck(id).syncOn || locked || (deck(id).bpm != null && other(id).bpm != null)
+        SyncRules.canToggleSync(deck(id).shownView(), deck(id.other).shownView(), locked)
+
+    /** Regra do app: a faixa de um deck tocando não é trocada. */
+    fun canReplaceTrack(id: DeckId): Boolean = SyncRules.canReplaceTrack(deck(id).view())
 
     /** Carrega a faixa no deck (só pausado); qualquer encaixe de batidas anterior se desfaz. */
     fun loadTrack(id: DeckId, track: Track, source: LibraryEntry? = null): Boolean {
@@ -343,63 +353,75 @@ class DjController(private val mixer: DjMixer) {
         return true
     }
 
-    /**
-     * SYNC, como no djay:
-     * - **Liga**: o deck passa a seguir o BPM do outro (se estiver tocando, já iguala o andamento e,
-     *   com o outro tocando, alinha as batidas e trava). Parado, espera o play.
-     * - **Desliga** o próprio SYNC: volta ao andamento que tinha antes.
-     * - Tocar no botão do **líder** (aceso só pelo vínculo) com tudo travado desfaz o vínculo e
-     *   cada deck fica no andamento em que está.
-     */
+    /** SYNC, como no djay (regras em [SyncRules.toggleSync]). */
     fun toggleSync(id: DeckId) {
         val me = deck(id)
-        val o = other(id)
-        when {
-            me.syncOn -> {
+        val o = deck(id.other)
+        when (val d = SyncRules.toggleSync(me.view(), o.view(), locked)) {
+            is SyncDecision.TurnOff -> {
                 me.setSync(false)
                 me.restoreTempoBeforeSync()
                 phaseLocked = false
-                if (o.syncOn && o.playingNow) matchTempo(follower = o, leader = me)
+                if (d.rematchOther) matchTempo(follower = o, leader = me)
             }
-            locked && o.syncOn -> {
+            SyncDecision.BreakLink -> {
                 o.setSync(false)
                 phaseLocked = false
             }
-            me.bpm == null || o.bpm == null -> Unit
-            else -> {
+            is SyncDecision.TurnOn -> {
                 me.setSync(true)
-                if (me.playingNow) {
-                    matchTempo(follower = me, leader = o)
-                    if (o.playingNow) lockBeats(follower = me, leader = o)
-                }
+                if (d.matchNow) matchTempo(follower = me, leader = o)
+                if (d.lockNow) lockBeats(follower = me, leader = o)
+            }
+            SyncDecision.Ignore -> Unit
+        }
+    }
+
+    /**
+     * Play/pause (regras em [SyncRules.togglePlay]). Antes de começar, a plataforma pode negar
+     * ([playbackGate], foco de áudio). Pausar desfaz o encaixe (o SYNC continua ligado, só sem travar).
+     */
+    fun togglePlay(id: DeckId) {
+        val me = deck(id)
+        val o = deck(id.other)
+        val decision = SyncRules.togglePlay(me.view(), o.view())
+        if (decision != PlayDecision.Pause && me.hasTrack && !me.audioReleased && !playbackGate()) return
+        when (decision) {
+            PlayDecision.Pause -> {
+                me.pause()
+                phaseLocked = false
+            }
+            PlayDecision.Start -> me.togglePlay()
+            is PlayDecision.AlignedStart -> {
+                if (decision.thisFollows) matchTempo(follower = me, leader = o) else matchTempo(follower = o, leader = me)
+                // largada quantizada: o motor alinha e começa no mesmo bloco; sem encaixe possível, só toca
+                if (!lockBeats(follower = me, leader = o, startFollower = true)) me.togglePlay()
             }
         }
     }
 
     /**
-     * Play/pause. Dar play num deck com SYNC (ou com o outro seguindo) enquanto o outro toca faz a
-     * largada alinhada: o seguidor entra no andamento do outro e na batida certa, e as batidas travam.
-     * Pausar desfaz o encaixe (o SYNC continua ligado, só sem travar).
+     * Evento de fora da tela (fone desconectado, outro app, ligação, "Pausar" da notificação...). A
+     * reação é do domínio ([InterruptionPolicy]); devolve-a para a plataforma guardar o estado se pedido.
      */
-    fun togglePlay(id: DeckId) {
-        val me = deck(id)
-        val o = other(id)
-        val starting = !me.playingNow
-        if (starting && me.hasTrack && !me.audioReleased && !playbackGate()) return
-        if (starting && (me.syncOn || o.syncOn) && o.playingNow && me.bpm != null && o.bpm != null) {
-            if (me.syncOn) matchTempo(follower = me, leader = o) else matchTempo(follower = o, leader = me)
-            // largada quantizada: o motor alinha e começa no mesmo bloco; sem encaixe possível, só toca
-            if (!lockBeats(follower = me, leader = o, startFollower = true)) me.togglePlay()
-        } else {
-            me.togglePlay()
-            if (!starting) phaseLocked = false
-        }
+    fun onInterruption(kind: Interruption): InterruptionReaction {
+        val reaction = InterruptionPolicy.reactTo(kind, a.playingNow || b.playingNow)
+        if (reaction.pauseAll) pauseAll()
+        if (reaction.notify) systemNotice = noticeFor(kind)
+        return reaction
+    }
+
+    private fun noticeFor(kind: Interruption): String? = when (kind) {
+        Interruption.OutputDisconnected -> "Saída de áudio desconectada: música pausada"
+        Interruption.OtherAppPlaying -> "Música pausada: outro app começou a tocar"
+        Interruption.Transient -> "Música pausada (ligação ou outro áudio)"
+        Interruption.PlaybackDenied -> "Não dá para tocar agora (ligação em andamento?)"
+        Interruption.PauseRequested -> null
     }
 
     /**
-     * Pausa os dois decks por fora da tela (notificação, foco de áudio, fone desconectado...): desfaz o
-     * encaixe de batidas e descarta uma largada alinhada ainda pendente no motor, que senão faria o
-     * seguidor tocar depois da pausa.
+     * Pausa os dois decks: desfaz o encaixe de batidas e descarta uma largada alinhada ainda pendente no
+     * motor, que senão faria o seguidor tocar depois da pausa.
      */
     fun pauseAll() {
         mixer.cancelAlign()
@@ -411,19 +433,17 @@ class DjController(private val mixer: DjMixer) {
     /** Volta ao início da faixa; com SYNC e o outro tocando, cai de novo na batida certa. */
     fun restart(id: DeckId) {
         val me = deck(id)
-        val o = other(id)
+        val o = deck(id.other)
         me.restart()
-        if (me.playingNow && o.playingNow && (me.syncOn || o.syncOn)) lockBeats(follower = me, leader = o)
+        if (SyncRules.relockAfterRestart(me.view(), o.view())) lockBeats(follower = me, leader = o)
     }
 
     /**
-     * Pede ao motor para alinhar as batidas do [follower] às do [leader] (e, se [startFollower],
-     * começar a tocar no mesmo bloco). Só trava se os BPM efetivos já estão iguais: com o ajuste
-     * limitado a ±16%, decks de andamentos muito diferentes não casam e não devem aparecer "travados".
-     * Devolve se o pedido foi feito.
+     * Pede ao motor para alinhar as batidas do [follower] às do [leader] (e, se [startFollower], começar
+     * a tocar no mesmo bloco), se as regras deixarem ([SyncRules.canLockBeats]). Devolve se pediu.
      */
     private fun lockBeats(follower: DeckController, leader: DeckController, startFollower: Boolean = false): Boolean {
-        if (!bpmMatched) return false
+        if (!SyncRules.canLockBeats(follower.view(), leader.view())) return false
         val followerGrid = follower.beatGrid() ?: return false
         val leaderGrid = leader.beatGrid() ?: return false
         mixer.requestAlign(follower.engineDeck, leader.engineDeck, followerGrid, leaderGrid, startFollower)
@@ -431,11 +451,9 @@ class DjController(private val mixer: DjMixer) {
         return true
     }
 
-    /** Ajusta o tempo do [follower] para que o BPM efetivo dele seja o do [leader] (limitado a ±16%). */
+    /** Ajusta o tempo do [follower] para o BPM efetivo do [leader] ([SyncRules.followerTempo]). */
     private fun matchTempo(follower: DeckController, leader: DeckController) {
-        val fb = follower.bpm ?: return
-        val lb = leader.effectiveBpm ?: return
-        follower.changeTempo(((lb / fb - 1.0) * 100.0).toFloat())
+        SyncRules.followerTempo(follower.view(), leader.view())?.let(follower::changeTempo)
     }
 
     fun changeCrossfader(x: Float) {
@@ -462,8 +480,3 @@ class DjController(private val mixer: DjMixer) {
         b.poll()
     }
 }
-
-enum class DeckId { A, B }
-
-/** Aparência do botão SYNC: apagado, ligado sem travar (contorno) ou travado nas batidas (cheio). */
-enum class SyncState { Off, Armed, Locked }

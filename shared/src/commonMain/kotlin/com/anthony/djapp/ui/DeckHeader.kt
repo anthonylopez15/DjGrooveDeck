@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.anthony.djapp.domain.DeckId
 
 // Cabeçalho: aviso do topo, nome/tempo/BPM de cada deck, botão de carregar e visão geral da onda.
 

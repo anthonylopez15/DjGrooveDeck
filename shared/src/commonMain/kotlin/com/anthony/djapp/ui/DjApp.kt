@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.anthony.djapp.domain.DeckId
 import kotlinx.coroutines.delay
 
 /** Tela principal: junta cabeçalho, biblioteca, abas e transporte, e cuida dos avisos. */
@@ -71,7 +72,7 @@ fun DjApp(controller: DjController, library: Library) {
                     notice = notice,
                     onLoad = { id ->
                         // regra: não troca a faixa de um deck que está tocando
-                        if (controller.deck(id).playingNow) {
+                        if (!controller.canReplaceTrack(id)) {
                             notice = mustPauseMessage(id)
                         } else {
                             target = id

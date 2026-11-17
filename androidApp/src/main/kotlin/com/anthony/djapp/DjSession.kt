@@ -12,6 +12,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.content.res.Configuration
 import com.anthony.djapp.engine.AndroidAudioOutput
+import com.anthony.djapp.domain.Interruption
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.ui.DjController
 import com.anthony.djapp.ui.SessionSnapshot
@@ -37,29 +38,23 @@ object DjSession {
             // processo novo: volta ao que estava (os decks são recarregados quando a tela aparece)
             SessionSnapshot.decode(prefs.getString(KEY_STATE, null))?.let(controller::restore)
 
-            // Foco de áudio: pede antes de tocar; outro app ou uma ligação pausa o set
+            // A plataforma só detecta e repassa; o que fazer é decidido no domínio (InterruptionPolicy).
+
+            // Foco de áudio: pedido antes de tocar; perdê-lo é outro app tocando ou uma ligação
             val focus = AudioFocus(context) { transient ->
-                if (anyPlaying) {
-                    pauseAll()
-                    controller.systemNotice =
-                        if (transient) "Música pausada (ligação ou outro áudio)" else "Música pausada: outro app começou a tocar"
-                }
+                interrupt(if (transient) Interruption.Transient else Interruption.OtherAppPlaying)
             }
             // Antes de tocar: pede o foco e liga a saída de áudio (que fica desligada com tudo parado)
             controller.playbackGate = {
                 focus.request().also { granted ->
-                    if (granted) output.start(mixer)
-                    else controller.systemNotice = "Não dá para tocar agora (ligação em andamento?)"
+                    if (granted) output.start(mixer) else interrupt(Interruption.PlaybackDenied)
                 }
             }
 
-            // Fone saiu ou o Bluetooth caiu: o Android passaria o som para o alto-falante, no meio do set.
-            // Como em qualquer player, pausa (e guarda o estado); o DJ decide quando voltar.
+            // Fone saiu ou o Bluetooth caiu: o Android passaria o som para o alto-falante, no meio do set
             val noisy = object : BroadcastReceiver() {
                 override fun onReceive(c: Context, intent: Intent) {
-                    if (intent.action != AudioManager.ACTION_AUDIO_BECOMING_NOISY || !anyPlaying) return
-                    pauseAll()
-                    controller.systemNotice = "Saída de áudio desconectada: música pausada"
+                    if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) interrupt(Interruption.OutputDisconnected)
                 }
             }
             val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
@@ -122,11 +117,13 @@ object DjSession {
         /** Algum deck tocando agora (estado real do motor). */
         val anyPlaying: Boolean get() = mixer.deckA.playing || mixer.deckB.playing
 
-        /** Pausa os dois decks. */
-        fun pauseAll() {
-            controller.pauseAll() // pelo controller: o encaixe de batidas também se desfaz
-            save()
+        /** Repassa um evento de fora da tela ao domínio e guarda o estado se a reação pedir. */
+        fun interrupt(kind: Interruption) {
+            if (controller.onInterruption(kind).persist) save()
         }
+
+        /** Pausa os dois decks (botão "Pausar" da notificação, fim do serviço) e guarda o estado. */
+        fun pauseAll() = interrupt(Interruption.PauseRequested)
 
         /** Guarda o estado em disco (assíncrono, barato). Chamar na thread principal. */
         fun save() {

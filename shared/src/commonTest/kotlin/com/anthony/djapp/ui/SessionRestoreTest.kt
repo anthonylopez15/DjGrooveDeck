@@ -1,5 +1,6 @@
 package com.anthony.djapp.ui
 
+import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Track

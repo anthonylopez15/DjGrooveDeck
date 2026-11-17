@@ -3,6 +3,7 @@ package com.anthony.djapp.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import com.anthony.djapp.domain.DeckId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -52,7 +53,7 @@ internal fun CoroutineScope.loadFromLibrary(
     onStatus: (String?) -> Unit,
 ) {
     val deck = controller.deck(deckId)
-    if (deck.playingNow) {
+    if (!controller.canReplaceTrack(deckId)) {
         onStatus(mustPauseMessage(deckId))
         return
     }
