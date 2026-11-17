@@ -147,7 +147,7 @@ class PlaybackService : Service() {
         private const val CHANNEL_ID = "playback"
         private const val NOTIFICATION_ID = 1
         private const val WATCH_INTERVAL_MS = 400L
-        private const val SAVE_EVERY_TICKS = 12 // ~5 s
+        private const val SAVE_EVERY_TICKS = 3 // ~1,2 s: se o processo for encerrado, perde no máximo isso
 
         /** Inicia o serviço (chamado quando o app sai da tela com música tocando). false se o sistema recusar. */
         fun start(context: Context): Boolean = try {

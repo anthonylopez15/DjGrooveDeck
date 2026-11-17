@@ -86,4 +86,45 @@ class PlatformEventsTest {
         assertEquals(1, store.saves)
         assertNull(c.state.value.notice)
     }
+
+    @Test
+    fun deckThatStopsAfterMemoryPressureInBackgroundReleasesItsAudio() {
+        val audio = FakeAudioSystem()
+        val c = testSession(audio = audio)
+        c.loadTrack(DeckId.A, track(), entry)
+        c.togglePlay(DeckId.A)
+        c.setForeground(false)
+
+        audio.emit(PlatformEvent.MemoryPressure) // tocando: não pode soltar agora
+        assertFalse(c.a.state.audioReleased)
+
+        c.interrupt(Interruption.PauseRequested) // "Pausar" da notificação (ou fim da faixa, pelo serviço)
+        assertFalse(c.a.playingNow)
+        assertTrue(c.a.state.audioReleased, "parou depois do pedido de memória: solta o áudio")
+    }
+
+    @Test
+    fun withoutMemoryPressureAPauseInBackgroundKeepsTheAudio() {
+        val c = testSession()
+        c.loadTrack(DeckId.A, track(), entry)
+        c.togglePlay(DeckId.A)
+        c.setForeground(false)
+        c.interrupt(Interruption.PauseRequested)
+        assertFalse(c.a.state.audioReleased, "sem pedido de memória, voltar ao app é instantâneo")
+    }
+
+    @Test
+    fun returningToTheScreenForgetsThePreviousMemoryPressure() {
+        val audio = FakeAudioSystem()
+        val c = testSession(audio = audio)
+        c.loadTrack(DeckId.A, track(), entry)
+        c.togglePlay(DeckId.A)
+        c.setForeground(false)
+        audio.emit(PlatformEvent.MemoryPressure)
+
+        c.setForeground(true) // voltou ao app tocando
+        c.setForeground(false) // saiu de novo
+        c.interrupt(Interruption.PauseRequested)
+        assertFalse(c.a.state.audioReleased, "o pedido antigo não vale para esta saída")
+    }
 }

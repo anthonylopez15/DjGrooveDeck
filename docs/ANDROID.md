@@ -70,7 +70,19 @@ Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desco
 
 Duas faixas de 5 min ocupam ~110 MB de PCM. Em segundo plano isso é um bom motivo para o Android matar o processo.
 
-- O `AndroidAudioSystem` registra um `ComponentCallbacks2` e, com `onTrimMemory(level ≥ TRIM_MEMORY_BACKGROUND)` ou `onLowMemory`, emite `PlatformEvent.MemoryPressure`. A `MixSession` decide: **só com a tela fora de cena**, guarda o estado e chama `releaseIdleAudio()`.
+- O `AndroidAudioSystem` registra um `ComponentCallbacks2` e emite `PlatformEvent.MemoryPressure` com
+  `onTrimMemory` em `TRIM_MEMORY_BACKGROUND` ou acima, em `RUNNING_LOW`/`RUNNING_CRITICAL`, ou com
+  `onLowMemory`. A `MixSession` decide: **só com a tela fora de cena**, guarda o estado e chama
+  `releaseIdleAudio()` (decks parados soltam o áudio; o que toca segue tocando).
+- **Deck que para depois do pedido**: a sessão lembra que houve pedido de memória com a tela fora de
+  cena; todo deck que parar em seguida (pausa pela notificação, interrupção, fim da faixa — tudo passa
+  por `MixSession.interrupt`) solta o áudio também. Voltar à tela zera esse aviso.
+- **O que o Android realmente manda** (verificado num Android 16): com o serviço tocando, o processo é
+  "de primeiro plano" e **não recebe** `TRIM_MEMORY_BACKGROUND` (o `am send-trim-memory` é recusado);
+  do Android 14 em diante os níveis `RUNNING_*` estão obsoletos. Na prática, o aviso chega depois que a
+  música para e o serviço se encerra. Até o Android 13, `RUNNING_LOW`/`CRITICAL` chegam mesmo tocando, e
+  o deck parado solta na hora. Parado em segundo plano, alguns fabricantes (ex.: Motorola) congelam o
+  processo e jogam a memória dele para o swap comprimido.
 - Com a thread de áudio parada (saída fechada), a sessão também chama `mixer.dropStaleAudio()`: sem isso, o PCM de uma faixa tocada com key lock continuaria preso no stretcher.
 - Só decks **parados** e com **origem conhecida** (`LibraryEntry`) soltam o PCM. Ficam: origem, posição, tempo, EQ, volume, SYNC, onda e grade.
 - Ao voltar à tela (`mix.setForeground(true)`), o `DjViewModel` recarrega o arquivo de cada deck liberado, mostrando o efeito de carregamento, e chama `restoreAudio`. O play fica inativo enquanto não há áudio.
@@ -81,7 +93,7 @@ Duas faixas de 5 min ocupam ~110 MB de PCM. Em segundo plano isso é um bom moti
 
 Se o sistema encerrar o processo mesmo assim (pouca memória, app parado há muito tempo), a sessão volta como estava na próxima abertura:
 
-- `MixSession.save()` grava o snapshot pela porta `SessionStore` (no Android, `PrefsSessionStore`: `SharedPreferences("session")`, chave `state`). É chamado em `MainActivity.onStop`, em `pauseAll` (inclui a ação Pausar e o fim do serviço), em `onTrimMemory` e a cada ~5 s pelo *watcher* do serviço enquanto a música toca em segundo plano.
+- `MixSession.save()` grava o snapshot pela porta `SessionStore` (no Android, `PrefsSessionStore`: `SharedPreferences("session")`, chave `state`). É chamado em `MainActivity.onStop`, em `pauseAll` (inclui a ação Pausar e o fim do serviço), em `onTrimMemory` e a cada ~1,2 s pelo *watcher* do serviço enquanto a música toca em segundo plano (se o processo for encerrado tocando, perde no máximo isso).
 - Guardado por deck (`DeckSnapshot`): origem (`LibraryEntry`), posição, tempo, tempo antes do SYNC, volume, EQ e SYNC. Da sessão: crossfader, master e key lock. O áudio não é guardado.
 - Ao nascer, a `MixSession` lê o estado pela porta `SessionStore` e chama `restore()`: o mixer volta na hora; cada deck fica com `pendingRestore` e a tela recarrega o arquivo assim que aparece (`applyRestore`), **pausado** e na mesma posição. A grade de batidas é recalculada da análise (mesmo resultado).
 - Escolher outra faixa antes de a recarga terminar cancela a restauração daquele deck. Se o arquivo não existir mais, aparece um aviso e o deck fica vazio.

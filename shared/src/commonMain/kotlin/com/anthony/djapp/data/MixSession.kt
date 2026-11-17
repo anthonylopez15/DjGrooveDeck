@@ -82,8 +82,17 @@ class MixSession(
 
     // ---------- tela, avisos, memória, disco ----------
 
+    /**
+     * Houve pedido de memória com a tela fora de cena: decks que pararem depois (pausa pela notificação,
+     * interrupção, fim da faixa) também soltam o áudio. Volta a false quando a tela reaparece.
+     */
+    private var memoryPressureInBackground = false
+
     /** A tela entrou/saiu de cena. */
-    fun setForeground(visible: Boolean) = update { it.copy(foreground = visible) }
+    fun setForeground(visible: Boolean) {
+        if (visible) memoryPressureInBackground = false
+        update { it.copy(foreground = visible) }
+    }
 
     /** A apresentação já mostrou o aviso. */
     fun consumeNotice() = update { it.copy(notice = null) }
@@ -110,15 +119,20 @@ class MixSession(
         when (event) {
             is PlatformEvent.Interrupted -> interrupt(event.kind)
             PlatformEvent.MemoryPressure -> if (!store.value.foreground) {
+                memoryPressureInBackground = true
                 save()
-                releaseIdleAudio()
+                releaseIdleAudio() // decks tocando não podem soltar agora; soltam quando pararem
             }
         }
     }
 
-    /** Trata uma interrupção e guarda o estado se a reação pedir. */
+    /**
+     * Trata uma interrupção e guarda o estado se a reação pedir. Em segundo plano, depois de um pedido de
+     * memória, os decks que pararam agora soltam o áudio (todo deck que para fora da tela passa por aqui).
+     */
     fun interrupt(kind: Interruption) {
         if (onInterruption(kind).persist) save()
+        if (memoryPressureInBackground && !store.value.foreground) releaseIdleAudio()
     }
 
     /** Estado atual para guardar em disco. */

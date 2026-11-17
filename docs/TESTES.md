@@ -12,7 +12,7 @@ Tudo de uma vez (lint + testes + Android Lint + compilação comum do iOS): `./g
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (112 testes)
+## Suítes (115 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -64,6 +64,7 @@ Roteiros já executados com sucesso:
 - Pedido de memória em segundo plano e recarga ao voltar.
 - Foco de áudio: com um deck tocando, `adb shell am start -a android.intent.action.VIEW -d content://media/external/audio/media/<id> -t audio/mpeg` abre a música em outro player, que toma o foco; o set deve pausar (`adb shell dumpsys audio | grep -A3 "Audio Focus stack"` mostra quem tem o foco).
 - Saída de áudio ociosa: `adb shell dumpsys audio | grep AudioPlaybackConfiguration` não mostra o app com ele aberto e parado; mostra ao tocar; some ~5 s depois de pausar.
+- Memória baixa tocando em segundo plano: com o A parado e o B tocando, `adb shell am send-trim-memory <pid> RUNNING_LOW` solta a faixa do A (heap cai ~40–50 MB) e o B segue tocando; ao voltar, o A mostra "Carregando". (`BACKGROUND` é recusado enquanto o serviço toca.)
 - Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.

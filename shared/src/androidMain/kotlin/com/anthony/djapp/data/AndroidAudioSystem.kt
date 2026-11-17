@@ -72,7 +72,7 @@ class AndroidAudioSystem(
 
         context.registerComponentCallbacks(object : ComponentCallbacks2 {
             override fun onTrimMemory(level: Int) {
-                if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) emit(PlatformEvent.MemoryPressure)
+                if (isMemoryPressure(level)) emit(PlatformEvent.MemoryPressure)
             }
 
             override fun onConfigurationChanged(newConfig: Configuration) = Unit
@@ -84,6 +84,18 @@ class AndroidAudioSystem(
 
         handler.postDelayed(idleWatcher(), IDLE_CHECK_MS)
     }
+
+    /**
+     * Pedido de memória que vale soltar áudio. BACKGROUND e acima: o app saiu de cena (Android 14+ só
+     * manda esses, e não para um processo com serviço tocando). RUNNING_LOW/CRITICAL: memória baixa com o
+     * app ativo — até o Android 13 chega mesmo tocando em segundo plano, e aí o deck **parado** pode soltar.
+     * UI_HIDDEN (só "a tela sumiu") não é falta de memória.
+     */
+    @Suppress("DEPRECATION")
+    private fun isMemoryPressure(level: Int): Boolean =
+        level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND ||
+            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
 
     private fun idleWatcher() = object : Runnable {
         private var idleSince = 0L
