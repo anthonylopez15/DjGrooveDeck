@@ -30,6 +30,8 @@ adb shell am start -n com.anthony.djapp/.MainActivity
 
 ## Convenções
 
+- **Arquitetura:** siga o [ADR 0001](adr/0001-arquitetura.md) (camadas, regras de dependência, nomes, testes).
+
 - Código e comentários em português; **commits e PRs em inglês**.
 - Nada alocado nem bloqueante na thread de áudio. Campos compartilhados com ela são `@Volatile`; mudanças compostas passam por objetos imutáveis publicados de uma vez (ver `SeekRequest`, `AlignRequest`).
 - Posição e nível são lidos só em fase de desenho; textos usam `elapsedTenths`.

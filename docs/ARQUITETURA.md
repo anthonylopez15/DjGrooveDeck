@@ -2,6 +2,10 @@
 
 Visão geral de como o GrooveDeck DJ é organizado, como o áudio flui e quem é dono de quê.
 
+> **Padrão adotado:** MVVM com fluxo unidirecional sobre Clean Architecture enxuta — ver
+> [ADR 0001](adr/0001-arquitetura.md), que define as camadas, as regras e o plano de migração.
+> Este documento descreve o estado **atual**; partes dele mudam conforme a migração avança.
+
 ## Módulos
 
 ```

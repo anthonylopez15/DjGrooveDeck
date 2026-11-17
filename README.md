@@ -17,6 +17,7 @@ Fluxo de áudio: `AudioOutput` (thread de áudio) → `DjMixer.render()` → `De
 | Documento | Conteúdo |
 |---|---|
 | [docs/GUIA-DE-USO.md](docs/GUIA-DE-USO.md) | Como usar o app |
+| [docs/adr/0001-arquitetura.md](docs/adr/0001-arquitetura.md) | **Padrão de arquitetura** (regras para toda mudança) e plano de migração |
 | [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | Módulos, fluxo de áudio e de estado, decisões |
 | [docs/MOTOR.md](docs/MOTOR.md) | Deck, mixer, EQ, key lock (WSOLA), BPM, saída Android |
 | [docs/UI.md](docs/UI.md) | Telas, componentes, regras e modelo do SYNC |
