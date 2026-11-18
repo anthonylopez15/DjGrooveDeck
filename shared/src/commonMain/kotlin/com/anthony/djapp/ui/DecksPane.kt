@@ -26,7 +26,14 @@ internal fun DeckPlatter(
 ) {
     val deck = state.deck(id)
     Column(modifier.fillMaxHeight().padding(vertical = 6.dp)) {
-        Platter(deck, meters, deckColor(id), state.bpmMatched, Modifier.weight(1f).fillMaxWidth())
+        Platter(
+            deck,
+            meters,
+            deckColor(id),
+            state.bpmMatched,
+            onBpmClick = { onAction(DjAction.OpenGridEditor(id)) },
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        )
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),

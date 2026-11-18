@@ -1,8 +1,10 @@
 package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.AudioSystem
+import com.anthony.djapp.domain.BeatGridEditing
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.domain.DeckSnapshot
+import com.anthony.djapp.domain.GridOverride
 import com.anthony.djapp.domain.Interruption
 import com.anthony.djapp.domain.InterruptionPolicy
 import com.anthony.djapp.domain.InterruptionReaction
@@ -13,6 +15,7 @@ import com.anthony.djapp.domain.SessionSnapshot
 import com.anthony.djapp.domain.SessionStore
 import com.anthony.djapp.domain.SyncDecision
 import com.anthony.djapp.domain.SyncRules
+import com.anthony.djapp.domain.TrackGridStore
 import com.anthony.djapp.engine.Deck
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Eq3
@@ -42,14 +45,15 @@ class MixSession(
     internal val mixer: DjMixer,
     internal val audio: AudioSystem,
     internal val sessionStore: SessionStore,
+    private val gridStore: TrackGridStore,
 ) {
     internal val store = MutableStateFlow(MixState())
 
     /** Estado atual da sessão. */
     val state: StateFlow<MixState> = store.asStateFlow()
 
-    val a = DeckSession(DeckId.A, mixer.deckA, store)
-    val b = DeckSession(DeckId.B, mixer.deckB, store)
+    val a = DeckSession(DeckId.A, mixer.deckA, store, gridStore::get)
+    val b = DeckSession(DeckId.B, mixer.deckB, store, gridStore::get)
 
     fun deck(id: DeckId): DeckSession = if (id == DeckId.A) a else b
 
@@ -112,6 +116,43 @@ class MixSession(
 
     /** Regra do app: a faixa de um deck tocando não é trocada. */
     fun canReplaceTrack(id: DeckId): Boolean = SyncRules.canReplaceTrack(deck(id).view())
+
+    /**
+     * Corrige a grade de batidas do deck [id]: [bpm] e a posição de uma batida ([firstBeatSec]). Vale já
+     * (SYNC e linhas da onda) e fica guardada para o arquivo. Desfaz o encaixe de batidas; com SYNC e o
+     * deck tocando, iguala o andamento de novo ao novo BPM.
+     */
+    fun setGrid(id: DeckId, bpm: Double, firstBeatSec: Double) {
+        val me = deck(id)
+        val source = me.state.source
+        if (!me.state.hasTrack || source == null) return
+        val b = BeatGridEditing.clampBpm(bpm)
+        val f = BeatGridEditing.normalizeFirstBeat(firstBeatSec, b)
+        gridStore.put(source, GridOverride(b, f))
+        me.applyGrid(b, f, edited = true)
+        afterGridChange(id)
+    }
+
+    /** Volta à grade detectada (esquece a correção do usuário para este arquivo). */
+    fun resetGrid(id: DeckId) {
+        val me = deck(id)
+        val source = me.state.source ?: return
+        gridStore.remove(source)
+        val detected = me.state.track?.beatGrid
+        me.applyGrid(detected?.bpm, detected?.firstBeatSec ?: 0.0, edited = false)
+        afterGridChange(id)
+    }
+
+    private fun afterGridChange(id: DeckId) {
+        unlock() // o alinhamento de batidas feito com a grade antiga não vale mais
+        val me = deck(id)
+        val o = deck(id.other)
+        if (me.state.syncOn && me.playingNow) matchTempo(follower = me, leader = o)
+        if (o.state.syncOn && o.playingNow) matchTempo(follower = o, leader = me)
+        if (SyncRules.relockAfterRestart(me.view(), o.view())) {
+            lockBeats(follower = if (me.state.syncOn) me else o, leader = if (me.state.syncOn) o else me)
+        }
+    }
 
     /** Carrega a faixa no deck (só pausado); qualquer encaixe de batidas anterior se desfaz. */
     fun loadTrack(id: DeckId, track: Track, source: LibraryEntry? = null): Boolean {

@@ -1,6 +1,7 @@
 package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.GridOverride
 import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.domain.SyncRules
 import com.anthony.djapp.engine.Deck
@@ -17,6 +18,8 @@ class DeckSession internal constructor(
     val id: DeckId,
     private val deck: Deck,
     private val store: MutableStateFlow<MixState>,
+    /** Grade corrigida pelo usuário para o arquivo (null = vale a detectada). */
+    private val gridFor: (LibraryEntry) -> GridOverride?,
 ) {
     /** Estado atual deste deck. */
     val state: DeckState get() = store.value.deck(id)
@@ -60,6 +63,7 @@ class DeckSession internal constructor(
     fun load(track: Track, source: LibraryEntry? = null): Boolean {
         if (!deck.load(track)) return false
         deck.tempo = 1.0
+        val saved = source?.let(gridFor) // correção feita pelo usuário numa vez anterior
         update {
             it.copy(
                 track = track,
@@ -67,8 +71,9 @@ class DeckSession internal constructor(
                 pendingRestore = null,
                 audioReleased = false,
                 loadingName = null,
-                bpm = track.beatGrid?.bpm,
-                firstBeatSec = track.beatGrid?.firstBeatSec ?: 0.0,
+                bpm = saved?.bpm ?: track.beatGrid?.bpm,
+                firstBeatSec = saved?.firstBeatSec ?: track.beatGrid?.firstBeatSec ?: 0.0,
+                gridEdited = saved != null,
                 syncOn = false,
                 tempoPercent = 0f,
                 playing = deck.playing,
@@ -101,6 +106,12 @@ class DeckSession internal constructor(
         val target = (positionSec + deltaSec).coerceIn(0.0, d)
         deck.seekToFraction((target / d).toFloat())
     }
+
+    // ---------- grade de batidas ----------
+
+    /** Troca a grade deste deck ([edited]: veio do usuário). A decisão e o que decorre dela são da [MixSession]. */
+    internal fun applyGrid(bpm: Double?, firstBeatSec: Double, edited: Boolean) =
+        update { it.copy(bpm = bpm, firstBeatSec = firstBeatSec, gridEdited = edited) }
 
     // ---------- ajustes ----------
 

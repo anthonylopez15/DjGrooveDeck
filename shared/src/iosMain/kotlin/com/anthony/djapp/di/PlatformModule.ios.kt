@@ -1,10 +1,12 @@
 package com.anthony.djapp.di
 
 import com.anthony.djapp.data.InMemorySessionStore
+import com.anthony.djapp.data.InMemoryTrackGridStore
 import com.anthony.djapp.data.IosAudioSystem
 import com.anthony.djapp.domain.AudioSystem
 import com.anthony.djapp.domain.EmptyTrackRepository
 import com.anthony.djapp.domain.SessionStore
+import com.anthony.djapp.domain.TrackGridStore
 import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.IosAudioOutput
@@ -18,6 +20,7 @@ actual val platformModule: Module = module {
     single { DjMixer(get<IosAudioOutput>().sampleRate) }
     single<AudioSystem> { IosAudioSystem(get(), get()) }
     single<SessionStore> { InMemorySessionStore() }
+    single<TrackGridStore> { InMemoryTrackGridStore() }
     single<TrackRepository> { EmptyTrackRepository }
 }
 

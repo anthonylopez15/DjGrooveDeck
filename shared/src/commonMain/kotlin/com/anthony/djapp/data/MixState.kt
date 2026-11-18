@@ -22,6 +22,8 @@ data class DeckState(
     val bpm: Double? = null,
     /** Posição (s) da primeira batida da grade. */
     val firstBeatSec: Double = 0.0,
+    /** A grade (BPM e primeira batida) foi corrigida pelo usuário; não é a detectada. */
+    val gridEdited: Boolean = false,
     /** Ajuste de tempo em % (±[SyncRules.MAX_TEMPO_PERCENT]). */
     val tempoPercent: Float = 0f,
     /** Tempo de antes de ligar o SYNC, para voltar a ele ao desligar. */

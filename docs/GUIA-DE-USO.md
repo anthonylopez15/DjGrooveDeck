@@ -24,6 +24,23 @@
 - Para soltar: toque no SYNC do seguidor (volta à velocidade anterior) ou no do líder (cada um fica como está).
 - Precisa de BPM detectado nos dois decks; andamentos muito diferentes (>16%) não casam.
 
+## Corrigir o BPM e alinhar a grade
+
+Quando o BPM detectado está errado (por exemplo, a metade) ou as linhas de batida não caem nas batidas,
+**toque no número do BPM no prato**. O painel abre no lugar dos pratos, com as ondas (e a grade) logo abaixo:
+
+- **−1, −0,1, +0,1, +1**: ajusta o BPM. O número do deck muda na hora.
+- **TAP**: toque no ritmo da música; a partir do segundo toque o BPM aparece (média dos intervalos). Parou
+  por mais de 2 s, recomeça.
+- **◂ 10 ms / 10 ms ▸**: desloca a grade para mais cedo ou mais tarde, até as linhas casarem com os picos.
+- **Batida 1 aqui**: com a música tocando, toque numa batida forte para ancorar a grade ali.
+- **Redefinir**: volta ao BPM detectado.
+- **OK** fecha o painel (tocar fora dele não fecha).
+
+A correção fica **guardada para o arquivo**: ao carregar a mesma música de novo (ou ao reabrir o app)
+ela volta como você deixou, e o BPM aparece **sublinhado** no prato. Se o arquivo for alterado, a correção
+antiga deixa de valer. Mudar o BPM de um deck com SYNC ligado reajusta o andamento do outro.
+
 ## Mixer
 
 Aba **MIXER**: EQ de 3 bandas por deck (esquerda total = corta a banda), fader de volume, medidores de nível, **crossfader** (A ↔ B) e **master**.

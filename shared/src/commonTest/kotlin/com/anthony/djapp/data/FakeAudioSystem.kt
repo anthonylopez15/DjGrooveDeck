@@ -3,6 +3,7 @@ package com.anthony.djapp.data
 import com.anthony.djapp.domain.AudioSystem
 import com.anthony.djapp.domain.PlatformEvent
 import com.anthony.djapp.domain.SessionStore
+import com.anthony.djapp.domain.TrackGridStore
 import com.anthony.djapp.engine.DjMixer
 
 /** [AudioSystem] falso: libera (ou nega) o play, conta os pedidos e deixa o teste emitir eventos. */
@@ -34,4 +35,5 @@ fun testSession(
     mixer: DjMixer = DjMixer(44100),
     audio: AudioSystem = FakeAudioSystem(),
     store: SessionStore = InMemorySessionStore(),
-) = MixSession(mixer, audio, store)
+    grids: TrackGridStore = InMemoryTrackGridStore(),
+) = MixSession(mixer, audio, store, grids)

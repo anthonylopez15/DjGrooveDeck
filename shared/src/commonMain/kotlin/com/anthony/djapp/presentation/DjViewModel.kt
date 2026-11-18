@@ -36,6 +36,7 @@ class DjViewModel(
     private val library: TrackRepository,
 ) : ViewModel() {
     private val screen = MutableStateFlow(ScreenState())
+    private val grid = GridEditingActions(session, screen, ::showNotice)
 
     val uiState: StateFlow<DjUiState> =
         combine(session.state, screen, ::uiStateOf)
@@ -87,6 +88,13 @@ class DjViewModel(
             is DjAction.OpenLibrary -> openLibrary(action.deck)
             DjAction.CloseLibrary -> screen.update { it.copy(browsing = false, libraryStatus = null) }
             is DjAction.PickTrack -> loadFromLibrary(action.entry)
+            is DjAction.OpenGridEditor -> grid.open(action.deck)
+            DjAction.CloseGridEditor -> grid.close()
+            is DjAction.GridAdjustBpm -> grid.adjustBpm(action.deck, action.delta)
+            is DjAction.GridTap -> grid.tap(action.deck)
+            is DjAction.GridNudge -> grid.nudge(action.deck, action.direction)
+            is DjAction.GridAnchorHere -> grid.anchorHere(action.deck)
+            is DjAction.GridReset -> grid.reset(action.deck)
         }
     }
 

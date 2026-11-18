@@ -43,6 +43,7 @@ Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
 |---|---|
 | `TrackRepository.kt` | Porta da biblioteca (`LibraryEntry`, listar, analisar, decodificar) e `EmptyTrackRepository`. |
 | `SessionSnapshot.kt` | Modelo do estado guardado (`SessionSnapshot`, `DeckSnapshot`) e a porta `SessionStore`. |
+| `BeatGridEditing.kt` | Regras de edição da grade (limites 40–220 BPM, passos, normalizar a primeira batida, deslocar, ancorar), `TapTempo` (tap tempo: média dos intervalos, recomeça após 2 s) e a porta `TrackGridStore` (grade corrigida por arquivo). |
 | `AudioSystem.kt` | Porta do sistema de áudio: `requestPlayback()`, `outputRunning` e eventos `PlatformEvent` (interrupção, falta de memória). |
 | `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±16%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
 | `Interruptions.kt` | `Interruption` (saída desconectada, outro app, temporária, play negado, pausa pedida) e `InterruptionPolicy`: pausar, salvar, avisar. |
@@ -68,7 +69,7 @@ A `MixSession` foi dividida por responsabilidade. Um recurso novo entra no arqui
 | Arquivo | Responsabilidade | Exemplos do que entra aqui |
 |---|---|---|
 | `MixSession.kt` | Mixer e regras dos **dois** decks juntos: crossfader, master, key lock, SYNC, play, restart, pausar tudo | efeitos globais, loops/hotcues que dependam do outro deck, novas regras de SYNC |
-| `DeckSession.kt` | **Um** deck: carregar, tocar, buscar, tempo, volume, EQ | loops, hotcues, filtro e gain por deck |
+| `DeckSession.kt` | **Um** deck (a grade corrigida do arquivo é aplicada ao carregar): carregar, tocar, buscar, tempo, volume, EQ | loops, hotcues, filtro e gain por deck |
 | `MixSessionLifecycle.kt` | Salvar/restaurar a sessão, pedido de memória, eventos da plataforma, interrupções | novos eventos da plataforma, novos campos no estado salvo |
 | `DeckSessionLifecycle.kt` | Restaurar um deck depois que o processo morre; soltar/devolver o áudio | idem, por deck |
 

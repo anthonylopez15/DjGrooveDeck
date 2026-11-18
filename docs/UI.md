@@ -25,6 +25,7 @@ Estado, ações e ViewModels ficam em `presentation` (`DjUiState`, `DjAction`, `
 | `MixerPane.kt` | Aba MIXER: volume, EQ, medidores e master. |
 | `BottomBar.kt` | Abas com ícones (ONDAS, MIXER, KEY) e transporte com o crossfader. |
 | `Buttons.kt` | `PlayButton`, `RestartButton`, `SyncButton` (ícones desenhados). |
+| `BpmPanel.kt` | Painel de BPM e grade (ajuste, TAP, deslocar 10 ms, "Batida 1 aqui", Redefinir); aparece no lugar dos pratos, não é diálogo. |
 | `Platter.kt` | Prato: anel girando com a faixa, tempo, BPM e tempos. |
 | `VerticalFader.kt` | Fader vertical com marcas (arraste relativo; toque duplo volta ao padrão). |
 | `Knob.kt` | Knob rotativo com leitura em % enquanto arrasta ou fora do neutro. |
