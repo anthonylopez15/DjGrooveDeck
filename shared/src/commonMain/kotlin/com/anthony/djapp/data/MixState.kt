@@ -34,6 +34,8 @@ data class DeckState(
     val syncOn: Boolean = false,
     /** Tocando (espelho do motor, atualizado quando muda). */
     val playing: Boolean = false,
+    /** Esperando o tempo 1 do outro deck para largar (play com SYNC). */
+    val startPending: Boolean = false,
     /** Nome da faixa em decodificação; null sem carregamento em curso. */
     val loadingName: String? = null,
     /** Progresso 0..1 da decodificação. */
@@ -55,7 +57,8 @@ data class DeckState(
     fun beatGrid(): BeatGrid? = bpm?.let { BeatGrid(it, firstBeatSec) }
 
     /** "Foto" para as regras do domínio; [playingNow] permite usar o estado real do motor. */
-    fun view(playingNow: Boolean = playing): DeckView = DeckView(bpm, tempoPercent, syncOn, playingNow)
+    fun view(playingNow: Boolean = playing, waitingStart: Boolean = startPending): DeckView =
+        DeckView(bpm, tempoPercent, syncOn, playingNow, waitingStart)
 }
 
 /** Estado da sessão de DJ: os dois decks e o que é do mixer. */

@@ -35,6 +35,8 @@ data class DeckUiState(
     val loadProgress: Float,
     val syncState: SyncState,
     val canToggleSync: Boolean,
+    /** Esperando o tempo 1 do outro deck para largar (play com SYNC). */
+    val waitingStart: Boolean,
 ) {
     val loading: Boolean get() = loadingName != null
     val durationTenths: Int get() = (durationSec * 10).toInt()
@@ -115,5 +117,6 @@ private fun deckUiOf(id: DeckId, mix: MixState): DeckUiState {
         loadProgress = d.loadProgress,
         syncState = mix.syncState(id),
         canToggleSync = mix.canToggleSync(id),
+        waitingStart = d.startPending,
     )
 }

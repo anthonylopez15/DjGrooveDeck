@@ -25,6 +25,8 @@ data class DeckView(
     val tempoPercent: Float,
     val syncOn: Boolean,
     val playing: Boolean,
+    /** Esperando o tempo 1 do outro deck para largar (play com SYNC): ainda não toca, mas vai tocar. */
+    val waitingStart: Boolean = false,
 ) {
     /** BPM com o ajuste de tempo aplicado. */
     val effectiveBpm: Double? get() = bpm?.let { it * (1.0 + tempoPercent / 100.0) }
@@ -56,6 +58,15 @@ sealed interface PlayDecision {
     data object Pause : PlayDecision
 
     data object Start : PlayDecision
+
+    /** Tocar de novo enquanto espera o tempo 1: desiste da largada. */
+    data object CancelStart : PlayDecision
+
+    /**
+     * SYNC ligado e o outro deck parado: toca já, mas a partir do início de compasso (tempo 1) mais próximo
+     * da posição atual.
+     */
+    data object StartOnBar : PlayDecision
 
     /**
      * Largada alinhada: o deck começa no andamento e na batida do outro, que já está tocando. Se
@@ -124,8 +135,10 @@ object SyncRules {
 
     fun togglePlay(me: DeckView, other: DeckView): PlayDecision = when {
         me.playing -> PlayDecision.Pause
-        (me.syncOn || other.syncOn) && other.playing && me.bpm != null && other.bpm != null ->
-            PlayDecision.AlignedStart(thisFollows = me.syncOn)
+        me.waitingStart -> PlayDecision.CancelStart
+        // SYNC ligado (em qualquer dos dois) e este deck com BPM: sempre larga no tempo 1
+        (me.syncOn || other.syncOn) && me.bpm != null ->
+            if (other.playing && other.bpm != null) PlayDecision.AlignedStart(thisFollows = me.syncOn) else PlayDecision.StartOnBar
         else -> PlayDecision.Start
     }
 

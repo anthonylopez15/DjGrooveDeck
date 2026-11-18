@@ -40,11 +40,12 @@ class DeckSession internal constructor(
     val level: Float get() = deck.level
 
     /** "Foto" para as regras, com o estado real do motor (tocando agora). */
-    internal fun view() = state.view(playingNow)
+    internal fun view() = state.view(playingNow, deck.startPending)
 
     internal fun syncFromEngine() {
         val p = deck.playing
-        if (state.playing != p) update { it.copy(playing = p) }
+        val w = deck.startPending
+        if (state.playing != p || state.startPending != w) update { it.copy(playing = p, startPending = w) }
     }
 
     // ---------- carregamento ----------
@@ -78,6 +79,16 @@ class DeckSession internal constructor(
     }
 
     // ---------- transporte ----------
+
+    /**
+     * Põe a posição no início de compasso (tempo 1) mais próximo, pela grade do deck (as linhas laranja da
+     * onda). Sem grade, não mexe.
+     */
+    internal fun snapToBar() {
+        val grid = state.beatGrid() ?: return
+        val rate = state.track?.sampleRate ?: return
+        deck.seekToFrame(grid.nearestBarStart(deck.effectivePositionFrames / rate) * rate)
+    }
 
     internal fun play() {
         deck.play()

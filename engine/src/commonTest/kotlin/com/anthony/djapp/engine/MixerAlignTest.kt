@@ -29,7 +29,7 @@ class MixerAlignTest {
         val ga = BeatGrid(120.0, 0.0)
         val gb = BeatGrid(120.0, 0.1)
 
-        mixer.requestAlign(follower = b, leader = a, followerGrid = gb, leaderGrid = ga, startFollower = true)
+        mixer.requestAlign(follower = b, leader = a, followerGrid = gb, leaderGrid = ga, mode = DjMixer.AlignMode.StartOnBeat)
         assertFalse(b.playing, "só começa quando a thread de áudio resolver o pedido")
         mixer.render(FloatArray(1024), 512)
 
@@ -51,7 +51,7 @@ class MixerAlignTest {
         val ga = BeatGrid(126.0, 0.05)
         val gb = BeatGrid(126.0, 0.31)
 
-        mixer.requestAlign(mixer.deckB, mixer.deckA, gb, ga, startFollower = false)
+        mixer.requestAlign(mixer.deckB, mixer.deckA, gb, ga, mode = DjMixer.AlignMode.PhaseOnly)
         mixer.render(FloatArray(1024), 512)
 
         assertTrue(mixer.deckB.playing)
@@ -67,8 +67,8 @@ class MixerAlignTest {
         val ga = BeatGrid(120.0, 0.0)
         val gb = BeatGrid(120.0, 0.1)
 
-        mixer.requestAlign(mixer.deckB, mixer.deckA, gb, ga, startFollower = true)
-        mixer.requestAlign(mixer.deckB, mixer.deckA, gb, ga, startFollower = false) // chega antes do bloco
+        mixer.requestAlign(mixer.deckB, mixer.deckA, gb, ga, mode = DjMixer.AlignMode.StartOnBeat)
+        mixer.requestAlign(mixer.deckB, mixer.deckA, gb, ga, mode = DjMixer.AlignMode.PhaseOnly) // chega antes do bloco
         mixer.render(FloatArray(1024), 512)
 
         assertTrue(mixer.deckB.playing, "a largada do primeiro pedido não pode se perder")

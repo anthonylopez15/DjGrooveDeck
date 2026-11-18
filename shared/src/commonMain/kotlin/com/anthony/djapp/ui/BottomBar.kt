@@ -74,9 +74,13 @@ internal fun TransportRow(state: DjUiState, onAction: (DjAction) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         RestartButton(state.a.hasTrack, { onAction(DjAction.Restart(DeckId.A)) })
-        PlayButton(state.a.playing, state.a.hasTrack, DeckAColor, { onAction(DjAction.TogglePlay(DeckId.A)) })
+        PlayButton(state.a.playing, state.a.hasTrack, DeckAColor, {
+            onAction(DjAction.TogglePlay(DeckId.A))
+        }, waiting = state.a.waitingStart)
         CrossfaderSlider(state.crossfader, { onAction(DjAction.ChangeCrossfader(it)) }, Modifier.weight(1f))
-        PlayButton(state.b.playing, state.b.hasTrack, DeckBColor, { onAction(DjAction.TogglePlay(DeckId.B)) })
+        PlayButton(state.b.playing, state.b.hasTrack, DeckBColor, {
+            onAction(DjAction.TogglePlay(DeckId.B))
+        }, waiting = state.b.waitingStart)
         RestartButton(state.b.hasTrack, { onAction(DjAction.Restart(DeckId.B)) })
     }
 }

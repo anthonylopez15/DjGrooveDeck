@@ -22,6 +22,13 @@ class Deck(private val outRate: Int) {
     @Volatile var positionFrames: Double = 0.0
         private set
 
+    /**
+     * Esperando o próximo tempo 1 do outro deck para largar (play com SYNC): ainda não toca, mas já vai
+     * tocar. Quem liga e desliga é o [DjMixer].
+     */
+    @Volatile var startPending: Boolean = false
+        internal set
+
     /** 1.0 = velocidade original. */
     @Volatile var tempo: Double = 1.0
 

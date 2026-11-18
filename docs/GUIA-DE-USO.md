@@ -34,7 +34,16 @@ Embaixo de cada prato há **[ − ] SYNC [ + ]**:
 
 - Toque em **SYNC** num deck para ele seguir o andamento do outro.
 - Com os dois tocando, as batidas também se alinham e o botão fica **cheio** (travado).
-- Dar play num deck com SYNC enquanto o outro toca faz a largada já na batida certa.
+- **Largada no tempo 1 do compasso:** com o SYNC ligado, ao dar **play** a faixa começa sempre num **tempo 1**
+  (a batida forte, a linha laranja da onda).
+  - Se o outro deck está **tocando**, a faixa **espera o próximo tempo 1 dele** (no máximo um compasso, ~2 s a
+    120 BPM) e entra exatamente nele, com os dois tempos 1 coincidindo. Enquanto espera, o botão de play fica com
+    o **anel grosso e preenchido**. Tocar no play de novo **cancela**.
+  - Se o outro está **parado**, toca já, a partir do tempo 1 mais próximo de onde estava (a posição "encaixa").
+  - Sem SYNC, nada muda: a faixa toca de onde parou.
+  - O "tempo 1" é o das linhas laranja (uma a cada 4 batidas, contadas da primeira batida detectada). O app
+    acha o ritmo, mas não sabe qual batida abre o compasso: se a detectada não é o "um" musical, os dois decks
+    ainda entram juntos, só que num tempo diferente do "um" da música.
 - Para soltar: toque no SYNC do seguidor (volta à velocidade anterior) ou no do líder (cada um fica como está).
 - Precisa de BPM detectado nos dois decks; andamentos muito diferentes (>20%) não casam.
 

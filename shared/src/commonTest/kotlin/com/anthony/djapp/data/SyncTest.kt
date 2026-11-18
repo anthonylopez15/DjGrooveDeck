@@ -39,6 +39,21 @@ class SyncTest {
         c.syncFromEngine()
     }
 
+    /** Renderiza até a largada no tempo 1 acontecer (no máximo ~1 min de áudio). */
+    private fun Rig.settleStart() {
+        var blocks = 0
+        while ((mixer.deckA.startPending || mixer.deckB.startPending) && blocks++ < 5000) settle()
+        settle()
+    }
+
+    /** Diferença (em batidas, no compasso) entre os dois decks: 0 = os tempos 1 coincidem. */
+    private fun barGap(r: Rig): Double {
+        val pa = r.c.a.state.beatGrid()!!.barPhaseAt(r.c.a.engineDeck.effectivePositionFrames / rate)
+        val pb = r.c.b.state.beatGrid()!!.barPhaseAt(r.c.b.engineDeck.effectivePositionFrames / rate)
+        val d = kotlin.math.abs(pa - pb)
+        return minOf(d, 4.0 - d)
+    }
+
     private fun Rig.bothPlaying() {
         c.togglePlay(DeckId.A)
         // B começa em outro ponto, fora de fase em relação ao A
@@ -115,11 +130,12 @@ class SyncTest {
         r.c.toggleSync(DeckId.B)
         r.c.togglePlay(DeckId.A) // pausa
         r.c.deck(DeckId.A).seek(0.31f) // e volta noutro ponto
-        r.c.togglePlay(DeckId.A) // play: largada alinhada
-        r.settle()
+        r.c.togglePlay(DeckId.A) // play: largada no tempo 1 do B
+        r.settleStart()
 
         assertTrue(r.c.state.value.locked)
         assertTrue(phaseGap(r) < 0.01, "batidas alinhadas: ${phaseGap(r)}")
+        assertTrue(barGap(r) < 0.01, "os tempos 1 coincidem: ${barGap(r)}")
         assertEquals(SyncState.Locked, r.c.state.value.syncState(DeckId.B))
     }
 
@@ -136,12 +152,13 @@ class SyncTest {
         assertFalse(r.c.state.value.locked)
 
         r.c.deck(DeckId.B).seek(0.17f)
-        r.c.togglePlay(DeckId.B) // play: entra no andamento do A, na batida certa
-        r.settle()
+        r.c.togglePlay(DeckId.B) // play: entra no andamento do A, no tempo 1 dele
+        r.settleStart()
 
         assertEquals(126.0, r.c.b.state.effectiveBpm!!, 0.2)
         assertTrue(r.c.state.value.locked)
         assertTrue(phaseGap(r) < 0.01)
+        assertTrue(barGap(r) < 0.01, "os tempos 1 coincidem: ${barGap(r)}")
     }
 
     @Test

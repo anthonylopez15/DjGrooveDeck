@@ -59,14 +59,40 @@ A busca é um objeto imutável `SeekRequest(frame)` publicado em `seekRef` numa 
 
 ### Alinhamento de batidas
 
-`requestAlign(follower, leader, followerGrid, leaderGrid, startFollower)` só registra um pedido (`AlignRequest`). No início do próximo `render`, a thread de áudio:
+`requestAlign(follower, leader, followerGrid, leaderGrid, mode)` só registra um pedido (`AlignRequest`). O `AlignMode` diz o que fazer com o seguidor:
+
+| Modo | O que faz |
+|---|---|
+| `PhaseOnly` | Só alinha a batida (ele já toca, ou fica parado). |
+| `StartOnBeat` | Alinha a batida e já larga, em qualquer batida. |
+| `StartOnBar` | **Larga no tempo 1** (o que o play com SYNC usa). |
+
+No início do próximo `render`, a thread de áudio:
 
 1. lê as posições efetivas dos dois decks no mesmo instante;
 2. calcula a fase da batida de cada um (`BeatGrid.phaseAt`);
 3. move o seguidor pelo caminho **mais curto** (`beatPhaseDelta`, de −0,5 a +0,5 batida);
-4. se `startFollower`, dá play no mesmo bloco (largada quantizada).
+4. nos modos de largada, dá play no mesmo bloco.
 
-Dois pedidos para o mesmo seguidor antes do bloco se fundem (o "começar a tocar" não se perde).
+Dois pedidos para o mesmo seguidor antes do bloco se fundem pelo maior modo (o "começar a tocar" não se perde).
+
+### Largada no tempo 1 (`StartOnBar`)
+
+A grade tem o compasso: `BeatGrid.barPhaseAt` (0 = tempo 1 até 4 batidas) e `nearestBarStart`. O tempo 1 é o das
+linhas laranja da onda, contado da primeira batida da grade (o detector acha o ritmo, não qual batida abre o
+compasso). Em cada bloco o mixer:
+
+1. põe o seguidor no início de compasso mais próximo de onde ele estava;
+2. vê onde o líder está no compasso; se o próximo tempo 1 dele **não cai neste bloco**, o seguidor segue
+   parado com `startPending` (a tela mostra a espera) e o pedido continua pendente;
+3. quando o tempo 1 do líder cai `k` frames adiante neste bloco, o seguidor começa **já no início do bloco**, mas
+   `k` frames antes do seu próprio tempo 1, de modo que chegue nele **no mesmo frame** em que o líder chega ao
+   dele (sem atraso dentro do bloco; só adianta um pouco se o tempo 1 do seguidor está a menos de `k` frames do
+   início da faixa);
+4. sem líder tocando, larga na hora.
+
+A espera é no máximo um compasso (~2 s a 120 BPM). `cancelAlign` (pausa geral, ou tocar de novo no play do
+seguidor que espera) desfaz o pedido e o `startPending`.
 
 ## WsolaStretcher (key lock)
 

@@ -54,7 +54,8 @@ Estado por deck: `syncOn`. Estado do par: `phaseLocked` (batidas alinhadas), `lo
 | Ação | Efeito |
 |---|---|
 | Ligar SYNC num deck | Passa a seguir o BPM do outro (limite ±20%). Se já toca, iguala o andamento; com o outro tocando, alinha as batidas e trava. Parado, espera o play. |
-| Play num deck com SYNC e o outro tocando | Largada quantizada: iguala o andamento e começa na batida certa (alinhamento feito na thread de áudio). |
+| Play num deck com SYNC e o outro tocando | **Largada no tempo 1:** iguala o andamento, parte do início de compasso mais próximo e **espera o próximo tempo 1 do outro** (até um compasso) para entrar exatamente nele; o botão de play fica com anel grosso e preenchido. Tocar de novo cancela. |
+| Play num deck com SYNC e o outro parado | Toca já, a partir do tempo 1 (início de compasso) mais próximo da posição atual. |
 | Desligar o SYNC do seguidor | Volta ao tempo que tinha antes de sincronizar. |
 | Tocar no botão do **líder** com tudo travado | Desfaz o vínculo; cada deck fica no andamento em que está. |
 | Pausar, trocar de faixa | Desfaz o encaixe (o SYNC continua ligado, sem travar). |

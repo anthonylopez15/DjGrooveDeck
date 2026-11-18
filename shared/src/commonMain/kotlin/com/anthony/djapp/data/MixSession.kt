@@ -186,7 +186,8 @@ class MixSession(
         val o = deck(id.other)
         val decision = SyncRules.togglePlay(me.view(), o.view())
         val ms = me.state
-        val startsWithAudio = decision != PlayDecision.Pause && ms.hasTrack && !ms.audioReleased
+        val startsWithAudio = decision != PlayDecision.Pause && decision != PlayDecision.CancelStart &&
+            ms.hasTrack && !ms.audioReleased
         if (startsWithAudio && !audio.requestPlayback()) {
             interrupt(Interruption.PlaybackDenied)
             return
@@ -197,10 +198,21 @@ class MixSession(
                 unlock()
             }
             PlayDecision.Start -> me.play()
+            PlayDecision.CancelStart -> {
+                mixer.cancelAlign()
+                me.syncFromEngine()
+            }
+            PlayDecision.StartOnBar -> {
+                me.snapToBar()
+                me.play()
+            }
             is PlayDecision.AlignedStart -> {
                 if (decision.thisFollows) matchTempo(follower = me, leader = o) else matchTempo(follower = o, leader = me)
                 // largada quantizada: o motor alinha e começa no mesmo bloco; sem encaixe possível, só toca
-                if (!lockBeats(follower = me, leader = o, startFollower = true)) me.play()
+                if (!lockBeats(follower = me, leader = o, startFollower = true)) {
+                    me.snapToBar() // sem encaixe possível (andamentos longe demais), ainda larga num tempo 1
+                    me.play()
+                }
             }
         }
     }
@@ -253,7 +265,9 @@ class MixSession(
         if (!SyncRules.canLockBeats(follower.view(), leader.view())) return false
         val followerGrid = follower.state.beatGrid() ?: return false
         val leaderGrid = leader.state.beatGrid() ?: return false
-        mixer.requestAlign(follower.engineDeck, leader.engineDeck, followerGrid, leaderGrid, startFollower)
+        // largada (play com SYNC): no tempo 1; sem ser largada (ligar o SYNC tocando): só alinha a batida
+        val mode = if (startFollower) DjMixer.AlignMode.StartOnBar else DjMixer.AlignMode.PhaseOnly
+        mixer.requestAlign(follower.engineDeck, leader.engineDeck, followerGrid, leaderGrid, mode)
         update { it.copy(phaseLocked = true) }
         return true
     }

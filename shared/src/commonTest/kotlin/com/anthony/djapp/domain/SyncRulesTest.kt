@@ -87,7 +87,10 @@ class SyncRulesTest {
     fun playDecisions() {
         assertEquals(PlayDecision.Pause, SyncRules.togglePlay(deck(playing = true), deck()))
         assertEquals(PlayDecision.Start, SyncRules.togglePlay(deck(), deck()))
-        assertEquals(PlayDecision.Start, SyncRules.togglePlay(deck(sync = true), deck())) // o outro parado
+        // SYNC ligado e o outro parado: toca já, mas num tempo 1
+        assertEquals(PlayDecision.StartOnBar, SyncRules.togglePlay(deck(sync = true), deck()))
+        assertEquals(PlayDecision.StartOnBar, SyncRules.togglePlay(deck(), deck(sync = true))) // o outro segue este
+        assertEquals(PlayDecision.CancelStart, SyncRules.togglePlay(deck(sync = true).copy(waitingStart = true), deck(playing = true)))
         assertEquals(PlayDecision.AlignedStart(thisFollows = true), SyncRules.togglePlay(deck(sync = true), deck(playing = true)))
         assertEquals(PlayDecision.AlignedStart(thisFollows = false), SyncRules.togglePlay(deck(), deck(sync = true, playing = true)))
         assertEquals(PlayDecision.Start, SyncRules.togglePlay(deck(sync = true, bpm = null), deck(playing = true)))

@@ -12,7 +12,7 @@ Tudo de uma vez (lint + testes + Android Lint + compilação comum do iOS): `./g
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (143 testes)
+## Suítes (156 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -20,6 +20,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `KeyLockTest` | Stretcher: identidade em tempo 1,0, duração, continuidade. |
 | `KeyLockQualityTest` | Afinação preservada em tempos 0,97/1,03 (regressão do erro de ~52 centésimos). |
 | `BpmDetectorTest` | BPM e fase em faixas sintéticas, oitava 80–160, rejeição de tom puro/ruído/faixa curta. |
+| `BarStartTest` | Largada no tempo 1 no motor: compasso (`barPhaseAt`, `nearestBarStart`), o seguidor espera o próximo tempo 1 do líder e os dois ficam com o tempo 1 coincidindo (< 0,002 batida), espera no máximo um compasso, BPMs diferentes, sem líder larga na hora, cancelar não larga nunca. |
 | `MixerAlignTest` | Alinhamento na thread de áudio, largada quantizada, fusão de pedidos. |
 | `ReleaseAudioTest` | Liberar/restaurar PCM, recusa com deck tocando, render sem áudio, faixa com key lock liberada com a thread parada. |
 | `MemoryBudgetTest`, `TrackLimitsTest` | Quanto cabe na memória (inclusive com o outro deck carregado; o pico nunca passa do heap) e o limite de 10 min. |
@@ -31,6 +32,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `AnalysisCachePrunerTest` (`shared`) | Limpeza do cache de BPM: apaga o que mudou ou sumiu da pasta listada e de pastas removidas; não toca subpastas, pastas irmãs de nome parecido, outras árvores nem provedores sem caminho. |
 | `TempoControlTest` (`shared`, sessão) | Andamento manual: vale no estado e no motor, limite ±20%, deck vazio ignora, mexer no seguidor desliga o SYNC, mexer no líder faz o seguidor acompanhar e re-alinhar, seguidor parado fica quieto. |
 | `IdleCleanupTest` (`shared`, sessão) | 30 min sem uso: estado antigo abre com decks limpos (mixer volta) e avisa; recente restaura; ao voltar à tela esvazia só passando de 30 min e se nada toca; salvar tocando conta como uso; temporizador em segundo plano (agenda, cancela, reagenda o que falta, não esvazia tocando). |
+| `BarStartSessionTest` (`shared`, sessão) | Play com SYNC: outro parado larga já do tempo 1 mais próximo; outro tocando espera e o estado mostra a espera; tocar de novo cancela; sem SYNC não encaixa; faixa sem BPM só toca; pausa geral desfaz a espera. |
 | `PlaybackGateTest` (`shared`, sessão) | O play passa pela porta `AudioSystem`: negado não toca e avisa; pausar e deck vazio não pedem. |
 | `PlatformEventsTest` (`shared`, sessão) | "A plataforma detecta, a sessão decide": restaura do `SessionStore` ao nascer; interrupção tocando pausa, salva e avisa; parado não faz nada; falta de memória só age com a tela fora de cena; pausa pedida sempre salva. |
 | `SyncRulesTest` (`shared`, domínio) | Regras puras do SYNC e do transporte: BPM igual, travado, tempo do seguidor e limite, decisões de SYNC e de play. |
@@ -70,6 +72,7 @@ Roteiros já executados com sucesso:
 - Memória baixa tocando em segundo plano: com o A parado e o B tocando, `adb shell am send-trim-memory <pid> RUNNING_LOW` solta a faixa do A (heap cai ~40–50 MB) e o B segue tocando; ao voltar, o A mostra "Carregando". (`BACKGROUND` é recusado enquanto o serviço toca.)
 - Andamento: segurar + no deck B (`adb shell input swipe x y x y 3000`) e conferir o percentual; medir a velocidade real (posição na tela contra `date +%s.%N`): em +20% deve dar ~1,20x.
 - Sem uso por 30 min: com as faixas carregadas e o app parado, editar o horário em `shared_prefs/session.xml` (`run-as`, `sed -i 's/savedAt=[0-9]*/savedAt=<31 min atrás em ms>/'`) e reabrir: decks vazios e aviso. Com o horário recente as faixas voltam.
+- Largada no tempo 1: mesma faixa de 120 BPM nos dois decks (compasso de 2,0 s), SYNC no B, A tocando; dar play no B em pontos diferentes e conferir que a diferença de posição entre os decks é múltiplo de 2,0 s (sem SYNC não é).
 - Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.

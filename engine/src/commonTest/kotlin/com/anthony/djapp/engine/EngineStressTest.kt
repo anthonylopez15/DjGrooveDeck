@@ -90,7 +90,19 @@ class EngineStressTest {
                     8 -> {
                         val ot = other.track
                         if (ot != null) {
-                            mixer.requestAlign(deck, other, BeatGrid(124.0, 0.0), BeatGrid(128.0, 0.0), startFollower = rnd(2) == 0)
+                            mixer.requestAlign(
+                                deck,
+                                other,
+                                BeatGrid(124.0, 0.0),
+                                BeatGrid(128.0, 0.0),
+                                if (rnd(2) ==
+                                    0
+                                ) {
+                                    DjMixer.AlignMode.StartOnBeat
+                                } else {
+                                    DjMixer.AlignMode.PhaseOnly
+                                },
+                            )
                         }
                     }
                     9 -> { // troca de faixa só com o deck parado (a regra do app)

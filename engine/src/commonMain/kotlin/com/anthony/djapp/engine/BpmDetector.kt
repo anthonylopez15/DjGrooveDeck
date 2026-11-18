@@ -3,6 +3,7 @@ package com.anthony.djapp.engine
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.round
 import kotlin.math.sqrt
 
 /** Grade de batidas de andamento fixo: batida n acontece em firstBeatSec + n * 60 / bpm. */
@@ -11,6 +12,27 @@ class BeatGrid(val bpm: Double, val firstBeatSec: Double) {
     fun phaseAt(sec: Double): Double {
         val x = (sec - firstBeatSec) * bpm / 60.0
         return x - floor(x)
+    }
+
+    /**
+     * Posição dentro do compasso em [sec], em batidas, de 0 (tempo 1, a batida forte) até
+     * [BEATS_PER_BAR]. O tempo 1 é o das linhas laranja da onda: uma batida a cada [BEATS_PER_BAR]
+     * contadas da primeira batida da grade (o detector acha o ritmo, não qual batida abre o compasso).
+     */
+    fun barPhaseAt(sec: Double): Double {
+        val beats = (sec - firstBeatSec) * bpm / 60.0
+        return beats - floor(beats / BEATS_PER_BAR) * BEATS_PER_BAR
+    }
+
+    /** Início de compasso (tempo 1) mais próximo de [sec], nunca antes da primeira batida da grade. */
+    fun nearestBarStart(sec: Double): Double {
+        val bars = round((sec - firstBeatSec) * bpm / 60.0 / BEATS_PER_BAR).coerceAtLeast(0.0)
+        return firstBeatSec + bars * BEATS_PER_BAR * 60.0 / bpm
+    }
+
+    companion object {
+        /** Batidas por compasso (4/4: bachata, merengue, salsa, pop...). */
+        const val BEATS_PER_BAR = 4
     }
 }
 

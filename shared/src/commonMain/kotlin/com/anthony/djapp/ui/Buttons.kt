@@ -41,13 +41,16 @@ fun PlayButton(
     color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Esperando o tempo 1 do outro deck para largar (play com SYNC): anel grosso e preenchido. */
+    waiting: Boolean = false,
 ) {
-    val c = (if (playing) color else Idle).copy(alpha = if (enabled) 1f else 0.35f)
+    val c = (if (playing || waiting) color else Idle).copy(alpha = if (enabled) 1f else 0.35f)
     Box(
         modifier
             .size(56.dp)
             .clip(CircleShape)
-            .border(2.dp, c, CircleShape)
+            .background(if (waiting) color.copy(alpha = 0.25f) else Color.Transparent)
+            .border(if (waiting) 4.dp else 2.dp, c, CircleShape)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
