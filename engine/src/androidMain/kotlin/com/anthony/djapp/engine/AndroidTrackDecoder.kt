@@ -5,64 +5,73 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.OpenableColumns
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.nio.ByteOrder
 
 /** Decodifica qualquer áudio suportado pelo Android (MP3, AAC, FLAC, WAV, OGG...) para [Track]. */
 object AndroidTrackDecoder {
+    private const val TAG = "DjDecode"
+
     /** Trecho decodificado na análise rápida: o suficiente para o detector de BPM. */
     private const val ANALYSIS_SECONDS = 100.0
 
     /**
-     * Uma decodificação completa por vez: cada uma confere a memória livre antes de começar
-     * ([MemoryBudget]); duas ao mesmo tempo (ex.: restaurar os dois decks) passariam juntas na conferência
-     * e somariam os picos.
+     * Decodificações completas em paralelo só quando a soma dos picos de memória cabe ([DecodeAdmission]);
+     * senão esperam a vez.
      */
-    private val fullDecodeLock = Mutex()
+    private val admission = DecodeAdmission(
+        maxHeap = { Runtime.getRuntime().maxMemory() },
+        usedHeap = { Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() } },
+        collect = { collectGarbage() },
+    )
+
+    @Suppress("ExplicitGarbageCollectionCall") // proposital: lixo ainda não coletado não é memória ocupada
+    private fun collectGarbage() = System.gc()
 
     /** [onProgress] recebe 0..1 conforme a decodificação avança (chamado fora da thread principal). */
     suspend fun decode(
         context: Context,
         uri: Uri,
         onProgress: (Float) -> Unit = {},
-    ): Track = fullDecodeLock.withLock {
-        withContext(Dispatchers.Default) {
-            val name = displayName(context, uri)
-            try {
-                val d = decodeRange(
-                    context,
-                    uri,
-                    startUs = 0L,
-                    maxSeconds = null,
-                    onProgress = onProgress,
-                    memoryLimit = currentMemoryLimit(),
-                ) { ensureActive() }
-                onProgress(1f)
-                Track(name, d.sampleRate, d.pcm)
-            } catch (e: OutOfMemoryError) {
-                // OutOfMemoryError é Error, não Exception: sem isto o app fecha em vez de avisar
-                throw TrackRejectedException("Memória insuficiente para carregar esta faixa", e)
+    ): Track = withContext(Dispatchers.Default) {
+        val name = displayName(context, uri)
+        val (durationFrames, sampleRate) = probeFrames(context, uri)
+        val queuedAt = SystemClock.elapsedRealtime()
+        val ticket = admission.admit(durationFrames, sampleRate)
+        val startedAt = SystemClock.elapsedRealtime()
+        Log.i(TAG, "decodificando '$name': esperou ${startedAt - queuedAt} ms pela memória")
+        try {
+            val d = decodeRange(context, uri, startUs = 0L, maxSeconds = null, onProgress = onProgress, ticket = ticket) {
+                ensureActive()
             }
+            onProgress(1f)
+            Log.i(TAG, "decodificado '$name' em ${SystemClock.elapsedRealtime() - startedAt} ms")
+            Track(name, d.sampleRate, d.pcm)
+        } catch (e: OutOfMemoryError) {
+            // OutOfMemoryError é Error, não Exception: sem isto o app fecha em vez de avisar
+            throw TrackRejectedException("Memória insuficiente para carregar esta faixa", e)
+        } finally {
+            ticket.release()
         }
     }
 
-    /**
-     * Limite para a próxima faixa, com a memória em uso agora (inclusive a do outro deck). Se a memória
-     * livre é o que limita, pede uma coleta antes de medir de novo: lixo ainda não coletado não conta.
-     */
-    @Suppress("ExplicitGarbageCollectionCall") // proposital: lixo ainda não coletado não é memória ocupada
-    private fun currentMemoryLimit(): MemoryBudget.Limit {
-        val rt = Runtime.getRuntime()
-        fun measure() = MemoryBudget.limit(rt.maxMemory(), rt.totalMemory() - rt.freeMemory())
-        val first = measure()
-        if (!first.byFreeMemory) return first
-        System.gc()
-        return measure()
+    /** Duração anunciada (em frames) e taxa do arquivo; 0 frames se ele não anuncia a duração. */
+    private fun probeFrames(context: Context, uri: Uri): Pair<Long, Int> {
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(context, uri, null)
+            val f = extractor.getTrackFormat(firstAudioTrack(extractor))
+            val rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+            val us = if (f.containsKey(MediaFormat.KEY_DURATION)) f.getLong(MediaFormat.KEY_DURATION) else 0L
+            (us / 1_000_000.0 * rate).toLong() to rate
+        } finally {
+            extractor.release()
+        }
     }
 
     /**
@@ -120,7 +129,7 @@ object AndroidTrackDecoder {
         startUs: Long,
         maxSeconds: Double?,
         onProgress: (Float) -> Unit,
-        memoryLimit: MemoryBudget.Limit? = null,
+        ticket: DecodeAdmission.Ticket? = null,
         check: () -> Unit,
     ): Decoded {
         val extractor = MediaExtractor()
@@ -141,6 +150,7 @@ object AndroidTrackDecoder {
             val maxFrames = maxSeconds?.let { (it * sampleRate).toLong() }
             val durationFrames = if (durationUs > 0) (durationUs / 1_000_000.0 * sampleRate).toLong() else 0L
             // faixa completa: confere a duração anunciada antes de começar a decodificar
+            val memoryLimit = ticket?.limit
             if (maxSeconds == null) checkFits(durationFrames, sampleRate, memoryLimit)
 
             val codec = MediaCodec.createDecoderByType(mime)
@@ -151,6 +161,7 @@ object AndroidTrackDecoder {
             val out = ShortBuilder(
                 if (maxSeconds == null && durationFrames > 0) ((durationFrames + 8192) * 2).toInt() else sampleRate * 2 * 30,
             )
+            ticket?.bufferAllocated()
             val info = MediaCodec.BufferInfo()
             var inputDone = false
             var outputDone = false

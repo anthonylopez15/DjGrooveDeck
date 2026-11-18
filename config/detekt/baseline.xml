@@ -2,23 +2,23 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, memoryLimit: MemoryBudget.Limit? = null, check: () -&gt; Unit, ): Decoded</ID>
+    <ID>CyclomaticComplexMethod:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, ticket: DecodeAdmission.Ticket? = null, check: () -&gt; Unit, ): Decoded</ID>
     <ID>CyclomaticComplexMethod:BpmDetector.kt$BpmDetector$fun detect(pcm: ShortArray, sampleRate: Int): BeatGrid?</ID>
     <ID>CyclomaticComplexMethod:Deck.kt$Deck$fun renderAdd(out: FloatArray, frames: Int, mixGain: Float)</ID>
     <ID>CyclomaticComplexMethod:DeckHeader.kt$@Composable private fun DeckHeader( deck: DeckUiState, meters: DeckMeters, color: Color, selected: Boolean, mirrored: Boolean, bpmMatched: Boolean, onLoad: () -&gt; Unit, onSeek: (Float) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:DjViewModel.kt$DjViewModel$fun onAction(action: DjAction)</ID>
-    <ID>LongMethod:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, memoryLimit: MemoryBudget.Limit? = null, check: () -&gt; Unit, ): Decoded</ID>
+    <ID>LongMethod:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, ticket: DecodeAdmission.Ticket? = null, check: () -&gt; Unit, ): Decoded</ID>
     <ID>LongMethod:BpmDetector.kt$BpmDetector$fun detect(pcm: ShortArray, sampleRate: Int): BeatGrid?</ID>
     <ID>LongMethod:Deck.kt$Deck$fun renderAdd(out: FloatArray, frames: Int, mixGain: Float)</ID>
     <ID>LongMethod:DeckHeader.kt$@Composable private fun DeckHeader( deck: DeckUiState, meters: DeckMeters, color: Color, selected: Boolean, mirrored: Boolean, bpmMatched: Boolean, onLoad: () -&gt; Unit, onSeek: (Float) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:TabIcons.kt$@Composable fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier)</ID>
     <ID>LongMethod:Waveform.kt$@Composable fun ScrollingWaveform( deck: DeckUiState, meters: DeckMeters, color: Color, label: String, onScrub: (deltaSec: Double) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:AndroidTrackDecoder.kt$AndroidTrackDecoder$( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, memoryLimit: MemoryBudget.Limit? = null, check: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:AndroidTrackDecoder.kt$AndroidTrackDecoder$( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, ticket: DecodeAdmission.Ticket? = null, check: () -&gt; Unit, )</ID>
     <ID>LongParameterList:Biquad.kt$Biquad$(b0: Double, b1: Double, b2: Double, a0: Double, a1: Double, a2: Double)</ID>
     <ID>LongParameterList:Track.kt$Track$( val name: String, val sampleRate: Int, val pcm: ShortArray, val detail: WaveformDetail = WaveformDetail.compute(pcm, sampleRate), /** Picos normalizados (0..1) da faixa inteira, para a visão geral; derivados de [detail]. */ val peaks: FloatArray = overviewPeaks(detail), /** BPM e batidas detectados (andamento fixo); null se não houve periodicidade clara. */ val beatGrid: BeatGrid? = BpmDetector.detect(pcm, sampleRate), /** Tamanho da faixa em frames; só difere do PCM numa faixa [released] (sem áudio, só onda e grade). */ val frames: Int = pcm.size / 2, )</ID>
     <ID>LongParameterList:Waveform.kt$( density: Density, layoutDirection: LayoutDirection, w: Int, h: Int, peaks: FloatArray, color: Color, )</ID>
     <ID>LoopWithTooManyJumpStatements:Deck.kt$Deck$for</ID>
-    <ID>NestedBlockDepth:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, memoryLimit: MemoryBudget.Limit? = null, check: () -&gt; Unit, ): Decoded</ID>
+    <ID>NestedBlockDepth:AndroidTrackDecoder.kt$AndroidTrackDecoder$private fun decodeRange( context: Context, uri: Uri, startUs: Long, maxSeconds: Double?, onProgress: (Float) -&gt; Unit, ticket: DecodeAdmission.Ticket? = null, check: () -&gt; Unit, ): Decoded</ID>
     <ID>ReturnCount:BpmDetector.kt$BpmDetector$fun detect(pcm: ShortArray, sampleRate: Int): BeatGrid?</ID>
     <ID>TooManyFunctions:AndroidTrackRepository.kt$AndroidTrackRepository : TrackRepository</ID>
     <ID>TooManyFunctions:Deck.kt$Deck</ID>

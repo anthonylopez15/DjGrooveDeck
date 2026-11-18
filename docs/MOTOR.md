@@ -140,6 +140,8 @@ Resultado sempre em [80, 160): uma faixa de 170 BPM sai como 85. Devolve `null` 
 - **Mensagem de recusa**: `TrackRejectedException` (a mensagem já é para o usuário). A lista de músicas a
   mostra em amarelo e negrito, sem o prefixo "Não consegui abrir", por exemplo "Faixa longa demais (17:20):
   o limite é de 15 min". Erros de arquivo/codec continuam com o prefixo.
-- **Uma decodificação completa por vez** (`Mutex`): duas ao mesmo tempo (ex.: restaurar os dois decks)
-  passariam juntas na conferência e somariam os picos.
+- **Decodificações em paralelo só se a soma dos picos cabe** (`DecodeAdmission`): cada uma reserva o pico
+  (buffer + cópia) até terminar; a que não cabe junto com as em andamento espera elas terminarem, e a que não
+  cabe nem sozinha é recusada. Assim carregar os dois decks (ou restaurá-los) usa o tempo do paralelo quando
+  há memória e nunca soma picos além do heap. O log `DjDecode` mostra quanto cada uma esperou.
 - `OutOfMemoryError` ainda é tratado e vira erro amigável, como última proteção.
