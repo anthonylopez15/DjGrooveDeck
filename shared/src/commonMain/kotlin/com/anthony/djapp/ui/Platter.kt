@@ -1,12 +1,10 @@
 package com.anthony.djapp.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -18,9 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.presentation.DeckMeters
@@ -34,14 +30,7 @@ import kotlin.math.sin
  * tempo/decorrido/restante. Por enquanto só visual.
  */
 @Composable
-fun Platter(
-    deck: DeckUiState,
-    meters: DeckMeters,
-    color: Color,
-    bpmMatched: Boolean,
-    onBpmClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun Platter(deck: DeckUiState, meters: DeckMeters, color: Color, bpmMatched: Boolean, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val d: Dp = min(maxWidth, maxHeight)
         Box(Modifier.size(d), contentAlignment = Alignment.Center) {
@@ -66,14 +55,11 @@ fun Platter(
             val small = (d.value * 0.095f).sp
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(formatTempo(deck.tempoPercent), fontSize = small, color = Idle)
-                // tocar no número abre o painel de BPM e grade; sublinhado = grade corrigida por você
                 Text(
                     deck.effectiveBpm?.let { formatBpm(it) } ?: "--",
                     color = if (bpmMatched) SyncBlue else BpmText,
                     fontSize = big,
                     fontWeight = FontWeight.Bold,
-                    textDecoration = if (deck.gridEdited) TextDecoration.Underline else null,
-                    modifier = Modifier.clickable(onClick = onBpmClick).padding(horizontal = 12.dp, vertical = 2.dp),
                 )
                 if (deck.hasTrack) {
                     Text(formatTenths(meters.elapsedTenths), fontSize = small)

@@ -35,8 +35,6 @@ data class DeckUiState(
     val loadProgress: Float,
     val syncState: SyncState,
     val canToggleSync: Boolean,
-    /** A grade (BPM e primeira batida) foi corrigida pelo usuário. */
-    val gridEdited: Boolean,
 ) {
     val loading: Boolean get() = loadingName != null
     val durationTenths: Int get() = (durationSec * 10).toInt()
@@ -67,10 +65,6 @@ data class DjUiState(
     val libraryStatus: String?,
     /** Arquivos em carregamento: id do arquivo -> deck de destino (preenchimento na lista). */
     val loadingEntries: Map<String, DeckId>,
-    /** Painel de BPM aberto para este deck (null = fechado). */
-    val gridEditor: DeckId?,
-    /** Toques do tap tempo já contados (o BPM aparece a partir do segundo). */
-    val tapCount: Int,
 ) {
     fun deck(id: DeckId): DeckUiState = if (id == DeckId.A) a else b
 }
@@ -83,8 +77,6 @@ internal data class ScreenState(
     val notice: String? = null,
     val libraryStatus: String? = null,
     val loadingEntries: Map<String, DeckId> = emptyMap(),
-    val gridEditor: DeckId? = null,
-    val tapCount: Int = 0,
 )
 
 internal fun uiStateOf(mix: MixState, screen: ScreenState): DjUiState = DjUiState(
@@ -100,8 +92,6 @@ internal fun uiStateOf(mix: MixState, screen: ScreenState): DjUiState = DjUiStat
     notice = screen.notice,
     libraryStatus = screen.libraryStatus,
     loadingEntries = screen.loadingEntries,
-    gridEditor = screen.gridEditor,
-    tapCount = screen.tapCount,
 )
 
 private fun deckUiOf(id: DeckId, mix: MixState): DeckUiState {
@@ -125,6 +115,5 @@ private fun deckUiOf(id: DeckId, mix: MixState): DeckUiState {
         loadProgress = d.loadProgress,
         syncState = mix.syncState(id),
         canToggleSync = mix.canToggleSync(id),
-        gridEdited = d.gridEdited,
     )
 }

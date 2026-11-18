@@ -60,18 +60,12 @@ fun DjApp(viewModel: DjViewModel, libraryViewModel: LibraryViewModel) {
                 } else {
                     when (state.tab) {
                         Tab.Waves -> {
-                            val editing = state.gridEditor
-                            if (editing != null) {
-                                // painel de BPM no lugar dos pratos; as ondas (com a grade) seguem à vista
-                                BpmPanel(state.deck(editing), state.tapCount, onAction, Modifier.weight(1f))
-                            } else {
-                                Row(
-                                    Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    for (id in DeckId.entries) {
-                                        DeckPlatter(state, id, meters(id), onAction, Modifier.weight(1f))
-                                    }
+                            Row(
+                                Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                for (id in DeckId.entries) {
+                                    DeckPlatter(state, id, meters(id), onAction, Modifier.weight(1f))
                                 }
                             }
                             WavesPane(state, meters, onAction, Modifier.weight(1.25f))

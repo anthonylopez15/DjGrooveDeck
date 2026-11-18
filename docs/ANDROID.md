@@ -84,10 +84,6 @@ Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desco
   ao remover uma pasta vinculada, somem todas as entradas dela. Arquivos de subpastas e de outras
   pastas não são tocados. Se a listagem não acontece (provedor indisponível, como um cartão SD fora),
   não limpa nada — vazio por falha não pode apagar o cache.
-- **Grade corrigida pelo usuário** (`PrefsTrackGridStore`, porta `TrackGridStore`): `SharedPreferences("grids")`,
-  chave `id#stamp` (como o cache de análise), valor `bpm;primeiraBatida`. Vale no lugar da detectada ao
-  carregar o arquivo e na restauração depois que o processo morre. Fica fora do cache de análise de
-  propósito: a limpeza do cache não pode apagar o trabalho do usuário.
 - Duração e BPM de cada arquivo são analisados em segundo plano (trecho de ~100 s) e guardados em `SharedPreferences("analysis")` com chave `id#stamp`; a lista mostra o valor na hora quando já existe.
 
 ## Memória
