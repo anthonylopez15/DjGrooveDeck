@@ -1,5 +1,20 @@
 # Android (`androidApp`)
 
+## Ícones
+
+Tudo em vetor (`androidApp/src/main/res`), sem imagens: dois pratos de DJ, um ciano e um rosa (as
+cores dos decks A e B), sobre o fundo escuro do app.
+
+| Recurso | Uso |
+|---|---|
+| `drawable/ic_launcher_background.xml`, `ic_launcher_foreground.xml` | Ícone adaptativo do app (formato definido pelo launcher: círculo, quadrado arredondado...). Os pratos ficam na zona segura de 66 dp. |
+| `drawable/ic_launcher_monochrome.xml` | Versão de uma cor, para os **ícones temáticos** do Android 13+ (o sistema pinta com a cor do papel de parede). |
+| `mipmap-anydpi/ic_launcher*.xml` | Montam as camadas (`ic_launcher` e `ic_launcher_round`). Sem pasta `-v26`: o minSdk já é 26. |
+| `drawable/ic_stat_deck.xml` | Ícone pequeno da notificação (só silhueta; o sistema exige monocromático). |
+
+Para mudar o desenho, edite os vetores. Se o build reclamar de `mipmap/ic_launcher` não encontrado depois
+de mexer nessas pastas, é cache de build desatualizado: `./gradlew :androidApp:clean`.
+
 ## Componentes
 
 | Classe | Papel |

@@ -11,7 +11,8 @@
         android:name=".GrooveDeckApp"
         android:allowBackup="true"
         android:largeHeap="true"
-        android:icon="@android:drawable/ic_media_play"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <!-- Retrato de propósito: o layout é de celular em pé. Tablet/paisagem está no roadmap

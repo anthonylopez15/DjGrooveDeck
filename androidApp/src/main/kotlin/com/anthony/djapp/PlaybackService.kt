@@ -128,7 +128,7 @@ class PlaybackService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(R.drawable.ic_stat_deck)
             .setContentTitle("GrooveDeck DJ")
             .setContentText("Música tocando · toque para abrir")
             .setContentIntent(open)
