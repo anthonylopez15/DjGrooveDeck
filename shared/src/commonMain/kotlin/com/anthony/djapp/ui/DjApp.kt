@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.presentation.DjAction
 import com.anthony.djapp.presentation.DjViewModel
+import com.anthony.djapp.presentation.LibraryAction
 import com.anthony.djapp.presentation.LibraryViewModel
 import com.anthony.djapp.presentation.Tab
 
@@ -37,7 +38,10 @@ fun DjApp(viewModel: DjViewModel, libraryViewModel: LibraryViewModel) {
     }
 
     val state by viewModel.uiState.collectAsState()
+    val browsing = state.browsing
     val libraryState by libraryViewModel.uiState.collectAsState()
+    // ao abrir a biblioteca, confere se a pasta aberta mudou enquanto a tela estava fechada
+    LaunchedEffect(browsing) { if (browsing) libraryViewModel.onAction(LibraryAction.Refresh) }
     val onAction = viewModel::onAction
     val meters = viewModel::meters
 

@@ -7,8 +7,11 @@ import com.anthony.djapp.engine.TrackInfo
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -43,7 +46,7 @@ class LibraryViewModelTest {
 
     /** Repositório falso: conteúdo por pasta, cache e análise controlados pelo teste. */
     private class FakeRepo(
-        val contents: Map<String, List<LibraryEntry>>,
+        val contents: MutableMap<String, List<LibraryEntry>>,
         val cached: Map<String, TrackInfo> = emptyMap(),
         val analysis: Map<String, TrackInfo> = emptyMap(),
     ) : TrackRepository {
@@ -64,8 +67,15 @@ class LibraryViewModelTest {
 
         override suspend fun list(folder: LibraryEntry): List<LibraryEntry> {
             listGate?.await()
+            listCalls++
             return contents[folder.id] ?: error("sem acesso")
         }
+
+        /** Avisos de mudança na pasta (o teste emite como se outro app tivesse mexido nela). */
+        val changed = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+        var listCalls = 0
+
+        override fun changes(folder: LibraryEntry): Flow<Unit> = changed
 
         override fun cachedInfo(file: LibraryEntry): TrackInfo? = cached[file.id]
 
@@ -81,7 +91,7 @@ class LibraryViewModelTest {
         cached: Map<String, TrackInfo> = emptyMap(),
         analysis: Map<String, TrackInfo> = emptyMap(),
     ) = FakeRepo(
-        contents = mapOf(
+        contents = mutableMapOf(
             bachata.id to listOf(sub, song1, song2, broken),
             sub.id to listOf(song2),
             merengue.id to emptyList(),
@@ -117,6 +127,82 @@ class LibraryViewModelTest {
         assertNull(s.infos[song2.id]?.bpm, "sem ritmo claro")
         assertEquals(TrackInfo(0.0, null), s.infos[broken.id], "falha na análise: mostra sem BPM")
         assertEquals(0, s.pendingAnalysis)
+    }
+
+    @Test
+    fun newFileAddedByAnotherAppShowsUpWithoutReloadingTheFolder() = runTest(dispatcher) {
+        val r = repo(analysis = mapOf(song1.id to TrackInfo(200.0, 124.0), song2.id to TrackInfo(180.0, 128.0)))
+        r.contents[bachata.id] = listOf(song1)
+        val vm = LibraryViewModel(r)
+        vm.onAction(LibraryAction.Open(bachata))
+        assertEquals(listOf(song1), vm.uiState.value.visible)
+        r.analyzed.clear()
+
+        r.contents[bachata.id] = listOf(song1, song2) // o gerenciador de arquivos copiou 2.mp3
+        r.changed.emit(Unit)
+        advanceTimeBy(600)
+
+        val s = vm.uiState.value
+        assertEquals(listOf(song1, song2), s.visible)
+        assertFalse(s.loading, "sem tela de carregamento")
+        assertEquals(listOf("2.mp3"), r.analyzed, "só a faixa nova é analisada")
+        assertEquals(128.0, s.infos[song2.id]?.bpm)
+        assertEquals(124.0, s.infos[song1.id]?.bpm, "o que já estava analisado continua")
+    }
+
+    @Test
+    fun fileRemovedByAnotherAppDisappears() = runTest(dispatcher) {
+        val r = repo(analysis = mapOf(song1.id to TrackInfo(200.0, 124.0), song2.id to TrackInfo(180.0, 128.0)))
+        r.contents[bachata.id] = listOf(song1, song2)
+        val vm = LibraryViewModel(r)
+        vm.onAction(LibraryAction.Open(bachata))
+
+        r.contents[bachata.id] = listOf(song2)
+        r.changed.emit(Unit)
+        advanceTimeBy(600)
+
+        assertEquals(listOf(song2), vm.uiState.value.visible)
+    }
+
+    @Test
+    fun burstOfChangesIsListedOnce() = runTest(dispatcher) {
+        val r = repo()
+        r.contents[bachata.id] = listOf(song1)
+        val vm = LibraryViewModel(r)
+        vm.onAction(LibraryAction.Open(bachata))
+        val before = r.listCalls
+
+        repeat(5) { r.changed.emit(Unit) }
+        advanceTimeBy(600)
+
+        assertEquals(before + 1, r.listCalls)
+    }
+
+    @Test
+    fun noWatchingAfterLeavingTheFolder() = runTest(dispatcher) {
+        val r = repo()
+        val vm = LibraryViewModel(r)
+        vm.onAction(LibraryAction.Open(bachata))
+        vm.onAction(LibraryAction.Back)
+        val before = r.listCalls
+
+        r.changed.emit(Unit)
+        advanceTimeBy(600)
+
+        assertEquals(before, r.listCalls)
+    }
+
+    @Test
+    fun refreshKeepsTheListWhenListingFails() = runTest(dispatcher) {
+        val r = repo()
+        val vm = LibraryViewModel(r)
+        vm.onAction(LibraryAction.Open(bachata))
+        val shown = vm.uiState.value.visible
+
+        r.contents.remove(bachata.id) // a listagem passa a falhar (cartão SD fora, permissão perdida...)
+        vm.onAction(LibraryAction.Refresh)
+
+        assertEquals(shown, vm.uiState.value.visible)
     }
 
     @Test

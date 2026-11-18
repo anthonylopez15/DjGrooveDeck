@@ -2,8 +2,10 @@ package com.anthony.djapp.domain
 
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 
 /** Item do navegador: pasta ou arquivo de áudio. [id] é opaco, definido pela plataforma. */
 data class LibraryEntry(val id: String, val name: String, val isFolder: Boolean, val stamp: Long = 0L)
@@ -23,6 +25,12 @@ interface TrackRepository {
 
     /** Conteúdo de [folder] (subpastas e áudios), já ordenado. */
     suspend fun list(folder: LibraryEntry): List<LibraryEntry>
+
+    /**
+     * Avisa quando o conteúdo de [folder] pode ter mudado (arquivo criado, apagado ou renomeado por
+     * outro app, como o gerenciador de arquivos). Pode avisar de mais; quem ouve lista de novo.
+     */
+    fun changes(folder: LibraryEntry): Flow<Unit> = emptyFlow()
 
     /** Duração e BPM já analisados e guardados (resposta imediata), ou null se ainda não analisada. */
     fun cachedInfo(file: LibraryEntry): TrackInfo?

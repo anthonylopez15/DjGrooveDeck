@@ -12,7 +12,7 @@ Tudo de uma vez (lint + testes + Android Lint + compilação comum do iOS): `./g
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (156 testes)
+## Suítes (167 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -28,7 +28,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `SyncTest` (`shared`, sessão) | Estados do botão SYNC, tempo, trava, desligar, liberação de áudio no controller, pausa de fora da tela (desfaz o encaixe e a largada pendente). |
 | `SessionRestoreTest` (`shared`, sessão) | Formato do estado salvo (ida e volta, texto corrompido), restauração num controller novo, cancelamento ao escolher outra faixa. |
 | `DjViewModelTest` (`shared`, apresentação) | Ações viram estado, biblioteca só com o deck parado, carregar faixa (progresso e erro), avisos que somem, recarga após o processo morrer e após liberar memória, sem repetir sem parar uma recarga que falhou. |
-| `LibraryViewModelTest` (`shared`, apresentação) | Lista de arquivos: raiz com as pastas vinculadas, listar pasta (com "carregando"), cache sem reanálise, análise com falha, entrar/voltar, pasta inacessível, troca de pasta antes de listar, adicionar/remover pasta. |
+| `LibraryViewModelTest` (`shared`, apresentação) | Lista de arquivos: raiz com as pastas vinculadas, listar pasta (com "carregando"), cache sem reanálise, análise com falha, entrar/voltar, pasta inacessível, troca de pasta antes de listar, adicionar/remover pasta, atualização quando outro app cria ou apaga arquivos na pasta aberta (sem "carregando", só analisa o novo, rajada vira uma listagem, para de ouvir ao sair da pasta, falha ao listar mantém a tela). |
 | `AnalysisCachePrunerTest` (`shared`) | Limpeza do cache de BPM: apaga o que mudou ou sumiu da pasta listada e de pastas removidas; não toca subpastas, pastas irmãs de nome parecido, outras árvores nem provedores sem caminho. |
 | `TempoControlTest` (`shared`, sessão) | Andamento manual: vale no estado e no motor, limite ±20%, deck vazio ignora, mexer no seguidor desliga o SYNC, mexer no líder faz o seguidor acompanhar e re-alinhar, seguidor parado fica quieto. |
 | `IdleCleanupTest` (`shared`, sessão) | 30 min sem uso: estado antigo abre com decks limpos (mixer volta) e avisa; recente restaura; ao voltar à tela esvazia só passando de 30 min e se nada toca; salvar tocando conta como uso; temporizador em segundo plano (agenda, cancela, reagenda o que falta, não esvazia tocando). |
@@ -78,3 +78,7 @@ Roteiros já executados com sucesso:
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.
 
 Também verificado com fone USB-C (desconectar o celular do computador para o teste; o log fica no aparelho e é lido depois com `adb logcat -d`). Não verificado: o caminho de recriação do `AudioTrack` após `DEAD_OBJECT` (não aconteceu nos testes) e o erro de memória com arquivos gigantes (só compilado).
+
+## Pasta atualizada pelo gerenciador de arquivos (celular)
+
+Com a lista de uma pasta aberta no app, copiar um arquivo de áudio para a pasta (ou apagá-lo) pelo gerenciador de arquivos ou por `adb shell cp`/`rm` faz a faixa aparecer/sumir em poucos segundos, sem reabrir a pasta. Use um nome que ordene no topo (ex.: `0_Novo.mp3`) para o item ficar visível na lista.

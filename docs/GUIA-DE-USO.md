@@ -3,7 +3,7 @@
 ## Primeiros passos
 
 1. Abra o app e toque em **♫** num deck para abrir a biblioteca.
-2. Na primeira vez toque em **+ Pasta** e escolha a pasta com suas músicas. O app mostra BPM e duração de cada faixa conforme as analisa.
+2. Na primeira vez toque em **+ Pasta** e escolha a pasta com suas músicas. O app mostra BPM e duração de cada faixa conforme as analisa. Se você adicionar ou apagar músicas na pasta pelo gerenciador de arquivos do celular, a lista aberta no app **se atualiza sozinha** (e ao abrir a biblioteca de novo), sem recarregar a pasta toda.
 3. Toque numa faixa para carregá-la no deck escolhido; um preenchimento da esquerda para a direita mostra o progresso.
 4. Repita para o outro deck e toque em **play**.
 

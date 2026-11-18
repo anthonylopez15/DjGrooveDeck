@@ -6,11 +6,13 @@ import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.domain.TrackRepository
 import com.anthony.djapp.engine.TrackInfo
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -50,6 +52,9 @@ sealed interface LibraryAction {
     /** Vincula uma pasta nova (abre o seletor da plataforma). */
     data object AddFolder : LibraryAction
 
+    /** Lista de novo a pasta aberta, sem tela de carregamento (ex.: ao abrir a biblioteca). */
+    data object Refresh : LibraryAction
+
     /** Desvincula uma pasta da raiz. */
     data class RemoveFolder(val folder: LibraryEntry) : LibraryAction
 }
@@ -69,18 +74,21 @@ class LibraryViewModel(private val repo: TrackRepository) : ViewModel() {
 
     private var listJob: Job? = null
     private var analysisJob: Job? = null
+    private var watchJob: Job? = null
 
     fun onAction(action: LibraryAction) {
         when (action) {
             is LibraryAction.Open -> if (action.folder.isFolder) navigate(local.value.path + action.folder)
             LibraryAction.Back -> navigate(local.value.path.dropLast(1))
             LibraryAction.AddFolder -> repo.requestAddFolder()
+            LibraryAction.Refresh -> refresh()
             is LibraryAction.RemoveFolder -> repo.removeFolder(action.folder)
         }
     }
 
     private fun navigate(path: List<LibraryEntry>) {
         listJob?.cancel()
+        watchJob?.cancel()
         val folder = path.lastOrNull()
         local.update { it.copy(path = path, loading = folder != null) }
         if (folder == null) return
@@ -93,6 +101,38 @@ class LibraryViewModel(private val repo: TrackRepository) : ViewModel() {
                 emptyList()
             }
             local.update { it.copy(entries = list, loading = false) }
+            analyze(list)
+        }
+        watch(folder)
+    }
+
+    /** Enquanto a pasta está aberta, lista de novo quando outro app mexe nela (arquivos novos ou apagados). */
+    @OptIn(FlowPreview::class)
+    private fun watch(folder: LibraryEntry) {
+        watchJob = viewModelScope.launch {
+            repo.changes(folder).debounce(CHANGE_DEBOUNCE_MS).collect { refresh() }
+        }
+    }
+
+    /**
+     * Atualiza a lista da pasta aberta sem recarregar do zero: não mostra "Carregando", mantém o que já foi
+     * analisado e só analisa o que é novo. Se a listagem falha, mantém a lista que está na tela.
+     */
+    private fun refresh() {
+        val folder = local.value.current ?: return
+        if (local.value.loading) return // a listagem inicial ainda está em andamento
+        listJob?.cancel()
+        listJob = viewModelScope.launch {
+            val list = try {
+                repo.list(folder)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (ignored: Exception) { // sem acesso agora: segue com o que está na tela
+                return@launch
+            }
+            if (local.value.current != folder) return@launch // o usuário navegou enquanto listava
+            if (list == local.value.entries) return@launch
+            local.update { it.copy(entries = list) }
             analyze(list)
         }
     }
@@ -119,6 +159,9 @@ class LibraryViewModel(private val repo: TrackRepository) : ViewModel() {
     }
 
     private companion object {
+        /** Copiar vários arquivos gera uma rajada de avisos: junta numa só atualização. */
+        const val CHANGE_DEBOUNCE_MS = 500L
+
         /** Sem ritmo/duração conhecidos (análise falhou ou não achou batida). */
         val UNKNOWN = TrackInfo(0.0, null)
     }

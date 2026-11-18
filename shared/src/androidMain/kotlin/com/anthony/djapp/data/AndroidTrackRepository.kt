@@ -2,7 +2,10 @@ package com.anthony.djapp.data
 
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.DocumentsContract
 import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.domain.TrackRepository
@@ -10,8 +13,12 @@ import com.anthony.djapp.engine.AndroidTrackDecoder
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 /**
@@ -103,6 +110,33 @@ class AndroidTrackRepository(
         if (cursor != null) pruneCache(folder.id, sorted)
         sorted
     }
+
+    /**
+     * O provedor de documentos só observa a pasta enquanto há um cursor aberto sobre ela (fechado o
+     * cursor, ele para de avisar): por isso o cursor fica aberto enquanto a lista é ouvida, com o
+     * [ContentObserver] registrado nele.
+     */
+    override fun changes(folder: LibraryEntry): Flow<Unit> = callbackFlow {
+        val tree = Uri.parse(folder.id.substringBefore('\n'))
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, folder.id.substringAfter('\n'))
+        val cursor = context.contentResolver.query(
+            children,
+            arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+            null,
+            null,
+            null,
+        )
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                trySend(Unit)
+            }
+        }
+        cursor?.registerContentObserver(observer)
+        awaitClose {
+            cursor?.unregisterContentObserver(observer)
+            cursor?.close()
+        }
+    }.flowOn(Dispatchers.IO)
 
     override suspend fun decode(file: LibraryEntry, onProgress: (Float) -> Unit): Track {
         val tree = Uri.parse(file.id.substringBefore('\n'))
