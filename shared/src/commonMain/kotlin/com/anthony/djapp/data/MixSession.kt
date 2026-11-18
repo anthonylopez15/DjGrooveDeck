@@ -113,6 +113,25 @@ class MixSession(
     /** Regra do app: a faixa de um deck tocando não é trocada. */
     fun canReplaceTrack(id: DeckId): Boolean = SyncRules.canReplaceTrack(deck(id).view())
 
+    /**
+     * Andamento manual do deck [id] (%, limitado a ±[SyncRules.MAX_TEMPO_PERCENT]). Como no djay: mexer no
+     * andamento de um deck que **segue** o outro desliga o SYNC dele; mexer no de quem **lidera** faz o
+     * seguidor acompanhar (e as batidas se alinham de novo se os dois tocam). O encaixe de batidas antigo
+     * deixa de valer.
+     */
+    fun setTempo(id: DeckId, percent: Float) {
+        val me = deck(id)
+        val o = deck(id.other)
+        if (!me.state.hasTrack) return
+        if (me.state.syncOn) me.setSync(false)
+        me.changeTempo(percent)
+        unlock()
+        if (o.state.syncOn && o.playingNow) {
+            matchTempo(follower = o, leader = me)
+            if (me.playingNow) lockBeats(follower = o, leader = me)
+        }
+    }
+
     /** Carrega a faixa no deck (só pausado); qualquer encaixe de batidas anterior se desfaz. */
     fun loadTrack(id: DeckId, track: Track, source: LibraryEntry? = null): Boolean {
         if (!deck(id).load(track, source)) return false

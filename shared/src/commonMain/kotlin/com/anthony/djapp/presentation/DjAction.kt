@@ -22,6 +22,9 @@ sealed interface DjAction {
 
     data class ChangeEq(val deck: DeckId, val band: EqBand, val value: Float) : DjAction
 
+    /** Andamento do deck em % (−16 a +16); 0 volta ao original. */
+    data class SetTempo(val deck: DeckId, val percent: Float) : DjAction
+
     data class ChangeCrossfader(val value: Float) : DjAction
 
     data class ChangeMaster(val value: Float) : DjAction

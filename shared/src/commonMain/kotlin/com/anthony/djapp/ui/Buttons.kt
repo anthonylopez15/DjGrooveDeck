@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -12,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,10 +22,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.domain.SyncState
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // Botões do transporte e o SYNC, com ícones desenhados (sem depender de fonte ou emoji).
 
@@ -86,6 +93,50 @@ fun RestartButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Mo
         }
     }
 }
+
+/**
+ * Botão que repete enquanto está pressionado (andamento − e +): um passo ao tocar; segurando, depois de
+ * 0,4 s repete a cada 70 ms e, passado 1 s, com passos maiores ([onStep] recebe `fast`).
+ */
+@Composable
+fun RepeatButton(label: String, enabled: Boolean, onStep: (fast: Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(8.dp)
+    val a = if (enabled) 1f else 0.35f
+    val step by rememberUpdatedState(onStep)
+    Box(
+        modifier
+            .height(40.dp)
+            .clip(shape)
+            .border(1.5.dp, Idle.copy(alpha = a), shape)
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures(
+                    onPress = {
+                        step(false)
+                        coroutineScope {
+                            val repeat = launch {
+                                delay(REPEAT_START_MS)
+                                var n = 0
+                                while (true) {
+                                    step(n++ > REPEAT_FAST_AFTER)
+                                    delay(REPEAT_EVERY_MS)
+                                }
+                            }
+                            tryAwaitRelease()
+                            repeat.cancel()
+                        }
+                    },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = Color(0xFFE6EDF3).copy(alpha = a), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+private const val REPEAT_START_MS = 400L
+private const val REPEAT_EVERY_MS = 70L
+private const val REPEAT_FAST_AFTER = 14 // ~1 s de repetição
 
 /** SYNC de 3 estados: cinza (desligado), contorno azul (ligado) e azul cheio (batidas travadas). */
 @Composable

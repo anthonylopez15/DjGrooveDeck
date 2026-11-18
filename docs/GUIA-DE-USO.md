@@ -16,6 +16,17 @@
 
 > Um deck que está tocando não troca de faixa: pause antes.
 
+## Andamento (acelerar e desacelerar)
+
+Embaixo de cada prato há **[ − ] SYNC [ + ]**:
+
+- **+ / −**: um toque muda o andamento em **0,1%**. **Segurando**, repete e acelera (depois de ~1 s passa a
+  0,5% por passo). O limite é **±16%**; o percentual aparece no prato, e o BPM efetivo muda junto.
+- **Tocar no percentual** (o "+6.7%" no prato) volta ao andamento original (0%).
+- Com **KEY** ligado, a música acelera ou desacelera **sem mudar o tom**; desligado, o tom acompanha (como num toca-discos).
+- **SYNC:** mexer no andamento de um deck que **segue** o outro desliga o SYNC dele (você assumiu o controle).
+  Mexer no de quem **lidera** faz o seguidor acompanhar, e as batidas se alinham de novo se os dois tocam.
+
 ## SYNC
 
 - Toque em **SYNC** num deck para ele seguir o andamento do outro.

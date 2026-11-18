@@ -80,6 +80,7 @@ class DjViewModel(
             is DjAction.Scrub -> session.deck(action.deck).scrubBySeconds(action.deltaSec)
             is DjAction.ChangeVolume -> session.deck(action.deck).changeVolume(action.value)
             is DjAction.ChangeEq -> changeEq(session.deck(action.deck), action.band, action.value)
+            is DjAction.SetTempo -> session.setTempo(action.deck, action.percent)
             is DjAction.ChangeCrossfader -> session.changeCrossfader(action.value)
             is DjAction.ChangeMaster -> session.changeMaster(action.value)
             DjAction.ToggleKeyLock -> session.toggleKeyLock()

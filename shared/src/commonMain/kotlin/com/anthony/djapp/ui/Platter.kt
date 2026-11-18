@@ -1,10 +1,12 @@
 package com.anthony.djapp.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -17,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import com.anthony.djapp.presentation.DeckMeters
@@ -30,7 +33,14 @@ import kotlin.math.sin
  * tempo/decorrido/restante. Por enquanto só visual.
  */
 @Composable
-fun Platter(deck: DeckUiState, meters: DeckMeters, color: Color, bpmMatched: Boolean, modifier: Modifier = Modifier) {
+fun Platter(
+    deck: DeckUiState,
+    meters: DeckMeters,
+    color: Color,
+    bpmMatched: Boolean,
+    onTempoClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val d: Dp = min(maxWidth, maxHeight)
         Box(Modifier.size(d), contentAlignment = Alignment.Center) {
@@ -54,7 +64,13 @@ fun Platter(deck: DeckUiState, meters: DeckMeters, color: Color, bpmMatched: Boo
             val big = (d.value * 0.14f).sp
             val small = (d.value * 0.095f).sp
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatTempo(deck.tempoPercent), fontSize = small, color = Idle)
+                // tocar no percentual volta ao andamento original (0%)
+                Text(
+                    formatTempo(deck.tempoPercent),
+                    fontSize = small,
+                    color = if (deck.tempoPercent == 0f) Idle else color,
+                    modifier = Modifier.clickable(onClick = onTempoClick).padding(horizontal = 12.dp, vertical = 2.dp),
+                )
                 Text(
                     deck.effectiveBpm?.let { formatBpm(it) } ?: "--",
                     color = if (bpmMatched) SyncBlue else BpmText,
