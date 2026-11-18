@@ -59,7 +59,7 @@ Em aparelhos com pouca memória, o Android pode pedir para liberar RAM enquanto 
 | Sintoma | Causa provável |
 |---|---|
 | "Pause o deck X para trocar a faixa" | O deck está tocando. |
-| "Faixa longa demais: o limite é de 10 min" | O app aceita faixas de até 10 min (na lista, elas aparecem com "· longa" em amarelo). |
+| "Faixa longa demais (17:20): o limite é de 15 min" | O app aceita faixas de até 15 min (na lista, elas aparecem com "· longa" em amarelo). |
 | "Faixa longa demais para a memória livre agora" | Com o que já está carregado no outro deck, não sobra memória para esta faixa. |
 | BPM `--` | Faixa sem batida clara, ou ainda analisando. SYNC não liga sem BPM. |
 | "Não dá para tocar agora" | Há uma ligação em andamento (o sistema não libera o áudio). |

@@ -97,12 +97,20 @@ Resultado sempre em [80, 160): uma faixa de 170 BPM sai como 85. Devolve `null` 
 **`AndroidTrackDecoder`**
 - `decode`: `MediaExtractor` + `MediaCodec` para PCM 16 bits estéreo, com progresso 0..1.
 - `analyze`: decodifica só ~100 s do meio da faixa para obter BPM e duração sem custo de faixa inteira.
-- **Limite de duração** (`TrackLimits`): faixas de até **10 min** (regra do app). A faixa inteira fica
+- **Limite de duração** (`TrackLimits`): faixas de até **15 min** (regra do app). A faixa inteira fica
   em memória (~10,6 MB/min); mixes e sets longos poderiam esgotar a memória com dois decks carregados.
 - **Limite de memória** (`MemoryBudget`), por cima da duração: vale o menor entre 30% do heap por faixa
   e o que cabe na memória livre **agora** (descontando o outro deck e 15% de reserva), sabendo que no
   pico a faixa existe duas vezes. Mensagens diferentes para "o aparelho não comporta" e "não cabe com o
   que já está carregado".
+- **O que 15 min custam** (151 MiB de PCM por faixa; no pico da decodificação, o dobro): uma faixa de
+  15 min só passa com heap de **505 MiB ou mais** (a trava por faixa é 30% do heap), e duas de 15 min, uma
+  em cada deck, com **581 MiB ou mais**. Medido: o edge 70 fusion tem heap de **512 MiB** (com `largeHeap`),
+  então comporta uma faixa de 15 min, mas **não duas** de 15 min ao mesmo tempo (a segunda é recusada com
+  "cabem ~N min com o que já está carregado"). Faixas de até ~10 min cabem duas vezes sem problema.
+- **Mensagem de recusa**: `TrackRejectedException` (a mensagem já é para o usuário). A lista de músicas a
+  mostra em amarelo e negrito, sem o prefixo "Não consegui abrir", por exemplo "Faixa longa demais (17:20):
+  o limite é de 15 min". Erros de arquivo/codec continuam com o prefixo.
 - **Uma decodificação completa por vez** (`Mutex`): duas ao mesmo tempo (ex.: restaurar os dois decks)
   passariam juntas na conferência e somariam os picos.
 - `OutOfMemoryError` ainda é tratado e vira erro amigável, como última proteção.

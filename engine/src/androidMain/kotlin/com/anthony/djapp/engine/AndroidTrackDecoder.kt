@@ -46,7 +46,7 @@ object AndroidTrackDecoder {
                 Track(name, d.sampleRate, d.pcm)
             } catch (e: OutOfMemoryError) {
                 // OutOfMemoryError é Error, não Exception: sem isto o app fecha em vez de avisar
-                throw IllegalStateException("Memória insuficiente para carregar esta faixa", e)
+                throw TrackRejectedException("Memória insuficiente para carregar esta faixa", e)
             }
         }
     }
@@ -99,6 +99,18 @@ object AndroidTrackDecoder {
         } ?: error("Arquivo sem faixa de áudio")
 
     /**
+     * Recusa a faixa de [frames] frames se passa do limite do app ([TrackLimits]: duração) ou da memória
+     * ([MemoryBudget]); a mensagem diz qual, com a duração. [memoryLimit] null = sem limite de memória.
+     */
+    private fun checkFits(frames: Long, sampleRate: Int, memoryLimit: MemoryBudget.Limit?) {
+        val durationSec = frames.toDouble() / sampleRate
+        if (TrackLimits.tooLong(durationSec)) throw TrackRejectedException(TrackLimits.tooLongMessage(durationSec))
+        if (memoryLimit != null && frames > memoryLimit.frames) {
+            throw TrackRejectedException(MemoryBudget.tooLongMessage(memoryLimit, sampleRate))
+        }
+    }
+
+    /**
      * Decodifica a partir de [startUs]; se [maxSeconds] não for null, para depois desse tanto de áudio.
      * [check] é chamado a cada volta do laço (use para propagar cancelamento).
      */
@@ -128,11 +140,8 @@ object AndroidTrackDecoder {
             var channels = inFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val maxFrames = maxSeconds?.let { (it * sampleRate).toLong() }
             val durationFrames = if (durationUs > 0) (durationUs / 1_000_000.0 * sampleRate).toLong() else 0L
-            // faixa completa: primeiro a regra do app (10 min), depois a memória do aparelho
-            if (maxSeconds == null && TrackLimits.tooLong(durationUs / 1_000_000.0)) error(TrackLimits.TOO_LONG_MESSAGE)
-            if (memoryLimit != null && durationFrames > memoryLimit.frames) {
-                error(MemoryBudget.tooLongMessage(memoryLimit, sampleRate))
-            }
+            // faixa completa: confere a duração anunciada antes de começar a decodificar
+            if (maxSeconds == null) checkFits(durationFrames, sampleRate, memoryLimit)
 
             val codec = MediaCodec.createDecoderByType(mime)
             codec.configure(inFormat, null, null, 0)
@@ -181,12 +190,7 @@ object AndroidTrackDecoder {
                                 val shorts = buf.order(ByteOrder.nativeOrder()).asShortBuffer()
                                 out.appendInterleaved(shorts, channels)
                                 // arquivo sem duração confiável: confere também enquanto decodifica
-                                if (maxSeconds == null && TrackLimits.tooLong(out.frames.toDouble() / sampleRate)) {
-                                    error(TrackLimits.TOO_LONG_MESSAGE)
-                                }
-                                if (memoryLimit != null && out.frames > memoryLimit.frames) {
-                                    error(MemoryBudget.tooLongMessage(memoryLimit, sampleRate))
-                                }
+                                if (maxSeconds == null) checkFits(out.frames.toLong(), sampleRate, memoryLimit)
                             }
                             codec.releaseOutputBuffer(outIdx, false)
                             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true

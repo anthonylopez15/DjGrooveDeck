@@ -11,6 +11,7 @@ import com.anthony.djapp.data.restoreAudio
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.domain.TrackRepository
+import com.anthony.djapp.engine.TrackRejectedException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -131,6 +132,9 @@ class DjViewModel(
             } catch (e: CancellationException) {
                 deck.cancelLoading()
                 throw e
+            } catch (e: TrackRejectedException) {
+                deck.cancelLoading()
+                setLibraryStatus(e.message) // recusa de propósito (longa demais, sem memória): mensagem pronta
             } catch (e: Exception) {
                 deck.cancelLoading()
                 setLibraryStatus("Não consegui abrir: ${e.message}")

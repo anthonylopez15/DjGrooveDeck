@@ -14,6 +14,8 @@ import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Track
 import com.anthony.djapp.engine.TrackInfo
+import com.anthony.djapp.engine.TrackLimits
+import com.anthony.djapp.engine.TrackRejectedException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -153,6 +155,16 @@ class DjViewModelTest {
         assertEquals("Não consegui abrir: arquivo corrompido", r.state.libraryStatus)
         assertNull(r.state.a.loadingName)
         assertFalse(r.state.a.hasTrack)
+    }
+
+    @Test
+    fun aRejectedTrackShowsItsMessageWithoutTheErrorPrefix() = runTest(dispatcher) {
+        val r = rig(FakeLibrary { throw TrackRejectedException(TrackLimits.tooLongMessage(17 * 60 + 20.0)) })
+        r.vm.onAction(DjAction.OpenLibrary(DeckId.A))
+        r.vm.onAction(DjAction.PickTrack(entryA))
+        assertEquals("Faixa longa demais (17:20): o limite é de 15 min", r.state.libraryStatus)
+        assertNull(r.state.a.loadingName)
+        assertFalse(r.state.a.hasTrack, "o deck continua como estava")
     }
 
     @Test

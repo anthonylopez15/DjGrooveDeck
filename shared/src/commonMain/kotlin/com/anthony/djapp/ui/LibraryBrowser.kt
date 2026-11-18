@@ -47,7 +47,14 @@ fun LibraryBrowser(
     Column(modifier.fillMaxSize()) {
         LibraryHeader(state.current, onAction)
         if (status != null) {
-            Text(status, color = Idle, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            // aviso (faixa longa demais, deck tocando, erro ao abrir): em destaque, para não passar despercebido
+            Text(
+                status,
+                color = TooLongColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
         }
         val pending = state.pendingAnalysis
         if (pending > 0) {
@@ -148,7 +155,7 @@ private fun LibraryRow(
                     fontSize = 15.sp,
                     color = if (info?.bpm != null) Color(0xFFE6EDF3) else Idle,
                 )
-                // acima do limite do app (10 min): não carrega; a duração aparece em destaque
+                // acima do limite do app (15 min): não carrega; a duração aparece em destaque
                 val tooLong = info != null && TrackLimits.tooLong(info.durationSec)
                 Text(
                     durationLabel(info) + if (tooLong) " · longa" else "",
