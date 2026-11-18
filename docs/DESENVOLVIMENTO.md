@@ -49,8 +49,8 @@ ktlint e detekt rodam como programas à parte (tarefas `JavaExec` no `build.grad
 plugins Gradle, para não depender da compatibilidade com o AGP/KMP.
 
 **Baselines (débito registrado):** o que já existia quando o lint foi adotado está em
-`config/detekt/baseline.xml` (23 itens: funções longas no DSP e no decodificador, classes grandes da
-sessão e alguns composables) e em `androidApp/lint-baseline.xml` (targetSdk 36 em vez de 37). Só
+`config/detekt/baseline.xml` (23 itens: funções longas no DSP e no decodificador, classes com muitas
+funções — `Deck`, `WsolaStretcher`, as sessões — e alguns composables) e em `androidApp/lint-baseline.xml` (targetSdk 36 em vez de 37). Só
 problemas **novos** falham. Ao resolver um item, regrave: `./gradlew detektBaseline` /
 `./gradlew :androidApp:updateLintBaselineDebug`.
 

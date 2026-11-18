@@ -32,13 +32,18 @@ import kotlinx.coroutines.flow.update
  *
  * Depende só de portas do domínio para falar com a plataforma: [AudioSystem] (pedir para tocar e
  * receber eventos) e [SessionStore] (estado guardado entre processos).
+ *
+ * Organização (um recurso novo entra no arquivo da sua responsabilidade):
+ * - `MixSession.kt` (este): mixer, regras de SYNC e transporte dos dois decks;
+ * - `MixSessionLifecycle.kt`: salvar/restaurar a sessão, pedido de memória e interrupções;
+ * - `DeckSession.kt` e `DeckSessionLifecycle.kt`: um deck (carregar, tocar, ajustes; restaurar e memória).
  */
 class MixSession(
-    private val mixer: DjMixer,
-    private val audio: AudioSystem,
-    private val sessionStore: SessionStore,
+    internal val mixer: DjMixer,
+    internal val audio: AudioSystem,
+    internal val sessionStore: SessionStore,
 ) {
-    private val store = MutableStateFlow(MixState())
+    internal val store = MutableStateFlow(MixState())
 
     /** Estado atual da sessão. */
     val state: StateFlow<MixState> = store.asStateFlow()
@@ -80,13 +85,13 @@ class MixSession(
         update { it.copy(keyLock = v) }
     }
 
-    // ---------- tela, avisos, memória, disco ----------
+    // ---------- tela e avisos (salvar, restaurar, memória e eventos da plataforma: MixSessionLifecycle.kt) ----------
 
     /**
      * Houve pedido de memória com a tela fora de cena: decks que pararem depois (pausa pela notificação,
      * interrupção, fim da faixa) também soltam o áudio. Volta a false quando a tela reaparece.
      */
-    private var memoryPressureInBackground = false
+    internal var memoryPressureInBackground = false
 
     /** A tela entrou/saiu de cena. */
     fun setForeground(visible: Boolean) {
@@ -96,62 +101,6 @@ class MixSession(
 
     /** A apresentação já mostrou o aviso. */
     fun consumeNotice() = update { it.copy(notice = null) }
-
-    /**
-     * Solta o áudio dos decks parados (o sistema pediu memória). Devolve quantos soltou. Com a saída de
-     * áudio desligada ninguém mais solta o PCM que o key lock segurava: solta aqui também.
-     */
-    fun releaseIdleAudio(): Int {
-        val released = listOf(a, b).count { it.releaseAudio() }
-        if (!audio.outputRunning) mixer.dropStaleAudio()
-        return released
-    }
-
-    /** Guarda o estado no [SessionStore]. */
-    fun save() = sessionStore.save(snapshot())
-
-    /**
-     * Evento detectado pela plataforma ([AudioSystem]). A decisão é daqui (e do domínio), igual em
-     * Android e iOS: interrupções seguem a [InterruptionPolicy]; falta de memória com a tela fora de
-     * cena guarda o estado (o processo pode ser encerrado logo) e solta o áudio dos decks parados.
-     */
-    fun onPlatformEvent(event: PlatformEvent) {
-        when (event) {
-            is PlatformEvent.Interrupted -> interrupt(event.kind)
-            PlatformEvent.MemoryPressure -> if (!store.value.foreground) {
-                memoryPressureInBackground = true
-                save()
-                releaseIdleAudio() // decks tocando não podem soltar agora; soltam quando pararem
-            }
-        }
-    }
-
-    /**
-     * Trata uma interrupção e guarda o estado se a reação pedir. Em segundo plano, depois de um pedido de
-     * memória, os decks que pararam agora soltam o áudio (todo deck que para fora da tela passa por aqui).
-     */
-    fun interrupt(kind: Interruption) {
-        if (onInterruption(kind).persist) save()
-        if (memoryPressureInBackground && !store.value.foreground) releaseIdleAudio()
-    }
-
-    /** Estado atual para guardar em disco. */
-    fun snapshot(): SessionSnapshot {
-        val s = store.value
-        return SessionSnapshot(a.snapshot(), b.snapshot(), s.crossfader, s.master, s.keyLock)
-    }
-
-    /**
-     * Volta ao estado guardado depois que o processo foi reiniciado: mixer na hora; os decks ficam
-     * marcados para recarregar os arquivos (pausados, na mesma posição) quando a tela aparecer.
-     */
-    fun restore(s: SessionSnapshot) {
-        changeCrossfader(s.crossfader)
-        changeMaster(s.master)
-        if (store.value.keyLock != s.keyLock) toggleKeyLock()
-        s.a?.let(a::scheduleRestore)
-        s.b?.let(b::scheduleRestore)
-    }
 
     /** Reflete no estado o que o motor mudou sozinho (ex.: a largada alinhada dá play na thread de áudio). */
     fun syncFromEngine() {
@@ -279,201 +228,5 @@ class MixSession(
     /** Ajusta o tempo do [follower] para o BPM efetivo do [leader] ([SyncRules.followerTempo]). */
     private fun matchTempo(follower: DeckSession, leader: DeckSession) {
         SyncRules.followerTempo(follower.view(), leader.view())?.let(follower::changeTempo)
-    }
-}
-
-/** Um deck da sessão: aplica as mudanças no [Deck] do motor e no estado. */
-class DeckSession internal constructor(
-    val id: DeckId,
-    private val deck: Deck,
-    private val store: MutableStateFlow<MixState>,
-) {
-    /** Estado atual deste deck. */
-    val state: DeckState get() = store.value.deck(id)
-
-    private fun update(f: (DeckState) -> DeckState) = store.update { it.withDeck(id, f(it.deck(id))) }
-
-    /** Deck do motor, para o mixer alinhar as batidas na thread de áudio. */
-    internal val engineDeck: Deck get() = deck
-
-    /** Estado real do motor (sem esperar o espelho no [state]). */
-    val playingNow: Boolean get() = deck.playing
-
-    /** Posição atual em segundos, lida do motor. */
-    val positionSec: Double
-        get() {
-            val t = deck.track ?: return 0.0
-            return deck.positionFrames / t.sampleRate
-        }
-
-    /** Nível de pico (0..1) para o medidor, lido do motor. */
-    val level: Float get() = deck.level
-
-    /** "Foto" para as regras, com o estado real do motor (tocando agora). */
-    internal fun view() = state.view(playingNow)
-
-    internal fun syncFromEngine() {
-        val p = deck.playing
-        if (state.playing != p) update { it.copy(playing = p) }
-    }
-
-    // ---------- carregamento ----------
-
-    fun startLoading(name: String) = update { it.copy(loadingName = name, loadProgress = 0f) }
-
-    /** Pode ser chamado de outra thread (o decodificador avisa o progresso). */
-    fun updateLoadProgress(p: Float) = update { it.copy(loadProgress = p.coerceIn(0f, 1f)) }
-
-    fun cancelLoading() = update { it.copy(loadingName = null) }
-
-    /** false se o deck está tocando (regra: não troca a faixa enquanto toca). */
-    fun load(track: Track, source: LibraryEntry? = null): Boolean {
-        if (!deck.load(track)) return false
-        deck.tempo = 1.0
-        update {
-            it.copy(
-                track = track,
-                source = source,
-                pendingRestore = null,
-                audioReleased = false,
-                loadingName = null,
-                bpm = track.beatGrid?.bpm,
-                firstBeatSec = track.beatGrid?.firstBeatSec ?: 0.0,
-                syncOn = false,
-                tempoPercent = 0f,
-                playing = deck.playing,
-            )
-        }
-        return true
-    }
-
-    // ---------- restauração após o processo ser encerrado ----------
-
-    /** Marca o deck para ser recarregado como estava em [snap]. */
-    fun scheduleRestore(snap: DeckSnapshot) {
-        if (state.track == null) update { it.copy(pendingRestore = snap) }
-    }
-
-    /** Estado para guardar em disco; null se não há faixa com origem conhecida. */
-    fun snapshot(): DeckSnapshot? {
-        val s = state
-        return s.pendingRestore ?: snapshotOfLoaded(s) // ainda não recarregado: guarda o que veio do disco
-    }
-
-    private fun snapshotOfLoaded(s: DeckState): DeckSnapshot? {
-        val src = s.source ?: return null
-        val t = s.track ?: return null
-        return DeckSnapshot(
-            source = src,
-            positionSec = deck.effectivePositionFrames / t.sampleRate,
-            tempoPercent = s.tempoPercent,
-            tempoBeforeSync = s.tempoBeforeSync,
-            volume = s.volume,
-            low = s.low,
-            mid = s.mid,
-            high = s.high,
-            syncOn = s.syncOn,
-        )
-    }
-
-    /** Carrega [reloaded] e devolve o deck ao estado de [snap] (pausado). false se não coube. */
-    fun applyRestore(reloaded: Track, snap: DeckSnapshot): Boolean {
-        if (state.pendingRestore !== snap || !load(reloaded, snap.source)) return false
-        changeTempo(snap.tempoPercent)
-        changeVolume(snap.volume)
-        changeLow(snap.low)
-        changeMid(snap.mid)
-        changeHigh(snap.high)
-        update { it.copy(syncOn = snap.syncOn, tempoBeforeSync = snap.tempoBeforeSync) }
-        val frames = (snap.positionSec * reloaded.sampleRate).coerceIn(0.0, (reloaded.frames - 1).coerceAtLeast(0).toDouble())
-        deck.seekToFrame(frames)
-        return true
-    }
-
-    /** Desiste de recarregar (arquivo sumiu, por exemplo): o deck fica vazio. */
-    fun dropRestore() = update { it.copy(pendingRestore = null) }
-
-    // ---------- memória ----------
-
-    /**
-     * Solta o PCM decodificado (dezenas de MB) mantendo tudo o mais; só com o deck parado e a origem
-     * conhecida. Devolve se soltou.
-     */
-    fun releaseAudio(): Boolean {
-        if (state.source == null || state.audioReleased || !deck.releaseAudio()) return false
-        update { it.copy(track = deck.track, audioReleased = true) } // cópia leve: duração, onda e grade
-        return true
-    }
-
-    /** Devolve o áudio recarregado de [DeckState.source]; o deck volta como estava. */
-    fun restoreAudio(reloaded: Track): Boolean {
-        if (!state.audioReleased || !deck.restoreAudio(reloaded.pcm)) return false
-        update { it.copy(track = deck.track, audioReleased = false) }
-        return true
-    }
-
-    // ---------- transporte ----------
-
-    internal fun play() {
-        deck.play()
-        syncFromEngine()
-    }
-
-    /** Pausa já, refletindo no estado sem esperar o próximo quadro. */
-    fun pause() {
-        deck.pause()
-        syncFromEngine()
-    }
-
-    fun restart() = deck.restart()
-
-    fun seek(fraction: Float) = deck.seekToFraction(fraction)
-
-    /** Arrastar a onda ampliada: move a posição em [deltaSec] segundos. */
-    fun scrubBySeconds(deltaSec: Double) {
-        val d = state.durationSec
-        if (d <= 0.0) return
-        val target = (positionSec + deltaSec).coerceIn(0.0, d)
-        deck.seekToFraction((target / d).toFloat())
-    }
-
-    // ---------- ajustes ----------
-
-    /** Liga/desliga o SYNC; ao ligar, guarda o tempo atual para voltar a ele ao desligar. */
-    internal fun setSync(on: Boolean) = update {
-        if (on && !it.syncOn) it.copy(syncOn = true, tempoBeforeSync = it.tempoPercent) else it.copy(syncOn = on)
-    }
-
-    /** Desligar o SYNC pelo botão devolve o deck à velocidade que tinha antes de sincronizar. */
-    internal fun restoreTempoBeforeSync() = changeTempo(state.tempoBeforeSync)
-
-    fun changeTempo(p: Float) {
-        val v = p.coerceIn(-SyncRules.MAX_TEMPO_PERCENT, SyncRules.MAX_TEMPO_PERCENT)
-        deck.tempo = 1.0 + v / 100.0
-        update { it.copy(tempoPercent = v) }
-    }
-
-    fun changeVolume(v: Float) {
-        val x = v.coerceIn(0f, 1f)
-        deck.volume = x
-        update { it.copy(volume = x) }
-    }
-
-    fun changeLow(k: Float) {
-        val x = k.coerceIn(0f, 1f)
-        deck.lowDb = Eq3.knobToDb(x)
-        update { it.copy(low = x) }
-    }
-
-    fun changeMid(k: Float) {
-        val x = k.coerceIn(0f, 1f)
-        deck.midDb = Eq3.knobToDb(x)
-        update { it.copy(mid = x) }
-    }
-
-    fun changeHigh(k: Float) {
-        val x = k.coerceIn(0f, 1f)
-        deck.highDb = Eq3.knobToDb(x)
-        update { it.copy(high = x) }
     }
 }

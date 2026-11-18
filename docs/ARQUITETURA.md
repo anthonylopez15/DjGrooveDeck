@@ -61,6 +61,21 @@ A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado re
 Android inicia em `GrooveDeckApp.onCreate`; iOS em `initKoin()`. Telas pegam o ViewModel com
 `koinViewModel()`; Activity e serviço usam `by inject()`.
 
+## A sessão por dentro (`data`)
+
+A `MixSession` foi dividida por responsabilidade. Um recurso novo entra no arquivo certo:
+
+| Arquivo | Responsabilidade | Exemplos do que entra aqui |
+|---|---|---|
+| `MixSession.kt` | Mixer e regras dos **dois** decks juntos: crossfader, master, key lock, SYNC, play, restart, pausar tudo | efeitos globais, loops/hotcues que dependam do outro deck, novas regras de SYNC |
+| `DeckSession.kt` | **Um** deck: carregar, tocar, buscar, tempo, volume, EQ | loops, hotcues, filtro e gain por deck |
+| `MixSessionLifecycle.kt` | Salvar/restaurar a sessão, pedido de memória, eventos da plataforma, interrupções | novos eventos da plataforma, novos campos no estado salvo |
+| `DeckSessionLifecycle.kt` | Restaurar um deck depois que o processo morre; soltar/devolver o áudio | idem, por deck |
+
+`MixSessionLifecycle` e `DeckSessionLifecycle` são **funções de extensão** das duas classes (precisam
+importar `...data.save`, `...data.interrupt` etc. fora do pacote). Os membros que elas usam são
+`internal` (`store`, `mixer`, `audio`, `sessionStore`, `update`).
+
 ## Fluxo de estado (MVVM + UDF)
 
 ```

@@ -22,7 +22,7 @@
     <ID>ReturnCount:BpmDetector.kt$BpmDetector$fun detect(pcm: ShortArray, sampleRate: Int): BeatGrid?</ID>
     <ID>TooManyFunctions:AndroidTrackRepository.kt$AndroidTrackRepository : TrackRepository</ID>
     <ID>TooManyFunctions:Deck.kt$Deck</ID>
-    <ID>TooManyFunctions:MixSession.kt$DeckSession</ID>
+    <ID>TooManyFunctions:DeckSession.kt$DeckSession</ID>
     <ID>TooManyFunctions:MixSession.kt$MixSession</ID>
     <ID>TooManyFunctions:WsolaStretcher.kt$WsolaStretcher</ID>
   </CurrentIssues>
