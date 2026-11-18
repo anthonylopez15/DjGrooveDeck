@@ -67,6 +67,7 @@ class AndroidTrackRepository(
         val set = (prefs.getStringSet(KEY_TREES, emptySet()) ?: emptySet()) - tree
         prefs.edit().putStringSet(KEY_TREES, set).apply()
         _folders.value = readFolders()
+        removeFromCache(AnalysisCachePruner.keysOfTree(analysis.all.keys, tree))
     }
 
     override suspend fun list(folder: LibraryEntry): List<LibraryEntry> = withContext(Dispatchers.IO) {
@@ -74,7 +75,7 @@ class AndroidTrackRepository(
         val docId = folder.id.substringAfter('\n')
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
         val out = ArrayList<LibraryEntry>()
-        context.contentResolver.query(
+        val cursor = context.contentResolver.query(
             children,
             arrayOf(
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -86,7 +87,8 @@ class AndroidTrackRepository(
             null,
             null,
             null,
-        )?.use { c ->
+        )
+        cursor?.use { c ->
             while (c.moveToNext()) {
                 val id = c.getString(0)
                 val name = c.getString(1) ?: continue
@@ -96,7 +98,10 @@ class AndroidTrackRepository(
                 if (isDir || isAudio(name, mime)) out += LibraryEntry("$tree\n$id", name, isDir, stamp)
             }
         }
-        out.sortedWith(compareBy({ !it.isFolder }, { it.name.lowercase() }))
+        val sorted = out.sortedWith(compareBy({ !it.isFolder }, { it.name.lowercase() }))
+        // só limpa o cache se a listagem aconteceu: provedor indisponível (cartão SD fora) devolve vazio
+        if (cursor != null) pruneCache(folder.id, sorted)
+        sorted
     }
 
     override suspend fun decode(file: LibraryEntry, onProgress: (Float) -> Unit): Track {
@@ -107,7 +112,16 @@ class AndroidTrackRepository(
 
     private val analysis = context.getSharedPreferences("analysis", Context.MODE_PRIVATE)
 
-    private fun cacheKey(file: LibraryEntry) = "${file.id}#${file.stamp}"
+    private fun cacheKey(file: LibraryEntry) = AnalysisCachePruner.key(file)
+
+    /** Apaga do cache o BPM de arquivos que mudaram ou sumiram da pasta recém-listada. */
+    private fun pruneCache(folderId: String, present: List<LibraryEntry>) =
+        removeFromCache(AnalysisCachePruner.staleAfterListing(analysis.all.keys, folderId, present))
+
+    private fun removeFromCache(keys: List<String>) {
+        if (keys.isEmpty()) return
+        analysis.edit().apply { keys.forEach(::remove) }.apply()
+    }
 
     override fun cachedInfo(file: LibraryEntry): TrackInfo? {
         val raw = analysis.getString(cacheKey(file), null) ?: return null

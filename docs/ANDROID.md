@@ -64,6 +64,11 @@ Verificado no aparelho com um fone Bluetooth (JBL), duas vezes: o aviso de desco
 
 - O usuário escolhe pastas (`OpenDocumentTree`); as permissões são persistidas.
 - `LibraryEntry(id, name, isFolder, stamp)`. O `id` é `"<tree uri>\n<documentId>"`; `stamp` muda quando o arquivo muda.
+- **Limpeza do cache** (`AnalysisCachePruner`, regra comum; o repositório só apaga): ao listar uma pasta,
+  somem as entradas de arquivos dela que foram **alterados** (outro `stamp`) ou **removidos/movidos**;
+  ao remover uma pasta vinculada, somem todas as entradas dela. Arquivos de subpastas e de outras
+  pastas não são tocados. Se a listagem não acontece (provedor indisponível, como um cartão SD fora),
+  não limpa nada — vazio por falha não pode apagar o cache.
 - Duração e BPM de cada arquivo são analisados em segundo plano (trecho de ~100 s) e guardados em `SharedPreferences("analysis")` com chave `id#stamp`; a lista mostra o valor na hora quando já existe.
 
 ## Memória
