@@ -37,8 +37,11 @@ class SessionRestoreTest {
             crossfader = 0.3f,
             master = 0.7f,
             keyLock = false,
+            savedAtMs = 1_763_000_000_123L,
         )
         assertEquals(s, SessionSnapshotCodec.decode(SessionSnapshotCodec.encode(s)))
+        // estado de versões antigas não tem horário: vale 0 (sem uso)
+        assertEquals(0L, SessionSnapshotCodec.decode("v=1\ncrossfader=0.5")?.savedAtMs)
     }
 
     @Test
@@ -59,6 +62,7 @@ class SessionRestoreTest {
         // "processo 1": duas faixas, ajustes, SYNC e posição
         val m1 = DjMixer(rate)
         val c1 = testSession(m1)
+        c1.nowMs = { 1_000L } // o texto salvo traz o horário: relógio fixo nas duas sessões
         assertTrue(c1.loadTrack(DeckId.A, track("A", 124.0), entryA))
         assertTrue(c1.loadTrack(DeckId.B, track("B", 128.0), entryB))
         c1.a.changeTempo(2.5f)
@@ -75,6 +79,7 @@ class SessionRestoreTest {
         // "processo 2": sessão nova lendo o texto guardado
         val m2 = DjMixer(rate)
         val c2 = testSession(m2)
+        c2.nowMs = { 1_000L }
         c2.restore(assertNotNull(SessionSnapshotCodec.decode(saved)))
         assertEquals(0.25f, c2.state.value.crossfader)
         assertEquals(0.6f, c2.state.value.master)

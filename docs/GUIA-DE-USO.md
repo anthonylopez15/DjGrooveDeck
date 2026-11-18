@@ -42,6 +42,14 @@ Embaixo de cada prato há **[ − ] SYNC [ + ]**:
 
 Aba **MIXER**: EQ de 3 bandas por deck (esquerda total = corta a banda), fader de volume, medidores de nível, **crossfader** (A ↔ B) e **master**.
 
+## Ficar muito tempo sem usar
+
+Se o app ficar **mais de 30 minutos sem uso**, ele solta as faixas da memória e **abre limpo**, sem reabrir as
+últimas músicas (aparece o aviso "Faixas descarregadas: o app ficou mais de 30 min sem uso"). Vale tanto
+quando o Android encerrou o app quanto quando você volta a um app que ficou aberto em segundo plano. O que
+**não** é descarregado: volume, EQ, crossfader, master e KEY. Música **tocando** em segundo plano conta como
+uso e nunca é descarregada. Menos de 30 minutos: tudo volta como estava, como antes.
+
 ## Tocar em segundo plano
 
 Com música tocando, ao sair do app ela continua e aparece uma notificação com **Pausar** e atalho para abrir. Ao voltar, tudo está como deixou. Sem música tocando, o áudio é desligado ao sair da tela. Removendo o app dos recentes, a música para.

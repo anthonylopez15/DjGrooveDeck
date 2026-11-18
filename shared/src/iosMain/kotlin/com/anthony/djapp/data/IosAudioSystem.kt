@@ -19,4 +19,6 @@ class IosAudioSystem(private val output: IosAudioOutput, private val mixer: DjMi
     }
 
     override fun setListener(listener: (PlatformEvent) -> Unit) = Unit
+
+    override fun setIdleTimeout(afterMs: Long?) = Unit
 }

@@ -77,6 +77,19 @@ class Deck(private val outRate: Int) {
     }
 
     /**
+     * Tira a faixa do deck (só parado): volta ao estado de deck vazio. O stretcher solta o PCM antigo na
+     * thread de áudio (ou em [dropStaleStretchSource], com ela parada). false se o deck toca.
+     */
+    fun unload(): Boolean {
+        if (playing) return false
+        track = null
+        positionFrames = 0.0
+        seekRef = SeekRequest(0.0)
+        tempo = 1.0
+        return true
+    }
+
+    /**
      * Solta o áudio da faixa (só pausado), guardando posição, tempo, EQ etc.; [restoreAudio] devolve.
      * Devolve false se o deck toca ou não há áudio a soltar.
      */
@@ -160,7 +173,7 @@ class Deck(private val outRate: Int) {
         val t = track
         val target = volume * mixGain
         if (t == null || !playing) {
-            if (t != null && t.released) dropStaleStretchSource()
+            if (t == null || t.released) dropStaleStretchSource()
             if (seekRef === appliedSeek) positionFrames = pos
             lastGain = target
             level *= 0.8f

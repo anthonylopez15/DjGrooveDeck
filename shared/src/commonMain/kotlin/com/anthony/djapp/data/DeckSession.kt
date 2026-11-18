@@ -102,6 +102,31 @@ class DeckSession internal constructor(
         deck.seekToFraction((target / d).toFloat())
     }
 
+    /**
+     * Esvazia o deck (faixa, origem, restauração pendente, andamento, SYNC): deck como recém-aberto. Volume e
+     * EQ ficam como estão. false se o deck toca.
+     */
+    internal fun unload(): Boolean {
+        if (!deck.unload()) return false
+        update {
+            it.copy(
+                track = null,
+                source = null,
+                pendingRestore = null,
+                audioReleased = false,
+                loadingName = null,
+                loadProgress = 0f,
+                bpm = null,
+                firstBeatSec = 0.0,
+                syncOn = false,
+                tempoPercent = 0f,
+                tempoBeforeSync = 0f,
+                playing = false,
+            )
+        }
+        return true
+    }
+
     // ---------- ajustes ----------
 
     /** Liga/desliga o SYNC; ao ligar, guarda o tempo atual para voltar a ele ao desligar. */

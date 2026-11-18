@@ -26,6 +26,8 @@ data class SessionSnapshot(
     val crossfader: Float,
     val master: Float,
     val keyLock: Boolean,
+    /** Quando foi guardado (ms de época); 0 = estado antigo sem horário. Ver [IdlePolicy]. */
+    val savedAtMs: Long = 0L,
 )
 
 /**

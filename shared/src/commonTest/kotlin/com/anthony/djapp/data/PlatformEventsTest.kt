@@ -29,6 +29,7 @@ class PlatformEventsTest {
             crossfader = 0.2f,
             master = 0.6f,
             keyLock = false,
+            savedAtMs = kotlin.time.Clock.System.now().toEpochMilliseconds(), // recente: restaura
         )
         val c = testSession(store = InMemorySessionStore(saved))
         assertEquals(0.2f, c.state.value.crossfader)

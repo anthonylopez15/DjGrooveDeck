@@ -20,6 +20,13 @@ interface AudioSystem {
 
     /** Registra quem recebe os eventos detectados (a sessão). Chamado na thread principal. */
     fun setListener(listener: (PlatformEvent) -> Unit)
+
+    /**
+     * Agenda um [PlatformEvent.IdleTimeout] daqui a [afterMs] (substitui o anterior); null cancela. É só
+     * um lembrete de "melhor esforço" (o sistema pode adiar com o app congelado): quem decide é a sessão,
+     * conferindo o relógio.
+     */
+    fun setIdleTimeout(afterMs: Long?)
 }
 
 /** Algo que a plataforma detectou e a sessão precisa tratar. */
@@ -29,4 +36,7 @@ sealed interface PlatformEvent {
 
     /** O sistema pediu memória (app em segundo plano, normalmente antes de encerrar o processo). */
     data object MemoryPressure : PlatformEvent
+
+    /** O temporizador pedido por [AudioSystem.setIdleTimeout] venceu. */
+    data object IdleTimeout : PlatformEvent
 }

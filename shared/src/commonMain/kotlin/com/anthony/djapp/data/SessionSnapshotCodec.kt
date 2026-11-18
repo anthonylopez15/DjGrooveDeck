@@ -19,6 +19,7 @@ object SessionSnapshotCodec {
         line("crossfader", s.crossfader.toString())
         line("master", s.master.toString())
         line("keyLock", s.keyLock.toString())
+        line("savedAt", s.savedAtMs.toString())
         deck("a", s.a)
         deck("b", s.b)
     }
@@ -58,6 +59,7 @@ object SessionSnapshotCodec {
                 crossfader = m.float("crossfader", 0.5f).coerceIn(0f, 1f),
                 master = m.float("master", 0.8f).coerceIn(0f, 1f),
                 keyLock = m["keyLock"]?.toBooleanStrictOrNull() ?: true,
+                savedAtMs = m["savedAt"]?.toLongOrNull() ?: 0L,
             )
         } catch (ignored: IllegalArgumentException) { // estado corrompido: começa do zero
             null

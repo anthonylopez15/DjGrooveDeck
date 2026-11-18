@@ -52,6 +52,18 @@ class AndroidAudioSystem(
         this.listener = listener
     }
 
+    private var idleTimeout: Runnable? = null
+
+    /** Lembrete de inatividade (melhor esforço: com o app congelado o sistema pode adiar). */
+    override fun setIdleTimeout(afterMs: Long?) {
+        idleTimeout?.let(handler::removeCallbacks)
+        idleTimeout = null
+        if (afterMs == null) return
+        val r = Runnable { emit(PlatformEvent.IdleTimeout) }
+        idleTimeout = r
+        handler.postDelayed(r, afterMs)
+    }
+
     /** Desliga a saída de áudio já (a tela saiu de cena sem música tocando). O próximo play religa. */
     fun stopOutput() = output.stop()
 

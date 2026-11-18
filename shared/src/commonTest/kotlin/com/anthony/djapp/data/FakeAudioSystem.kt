@@ -25,6 +25,14 @@ class FakeAudioSystem(var grant: Boolean = true) : AudioSystem {
         this.listener = listener
     }
 
+    /** Último temporizador de inatividade pedido (null = cancelado). */
+    var idleTimeoutMs: Long? = null
+        private set
+
+    override fun setIdleTimeout(afterMs: Long?) {
+        idleTimeoutMs = afterMs
+    }
+
     /** Simula a plataforma detectando algo. */
     fun emit(event: PlatformEvent) = listener(event)
 }

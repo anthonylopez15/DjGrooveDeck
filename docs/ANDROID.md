@@ -109,6 +109,21 @@ Duas faixas de 5 min ocupam ~110 MB de PCM. Em segundo plano isso é um bom moti
 - Falha ao recarregar (arquivo removido): aviso na tela; o deck fica sem áudio até outra faixa ser carregada.
 - Medido num aparelho real: 187 MB → 79 MB de PSS após o pedido de memória (heap Java 92 → 12 MB).
 
+## Sem uso por mais de 30 minutos
+
+Regra do domínio (`IdlePolicy`, 30 min): o app abre com os decks limpos e solta a memória. "Uso" é o último
+momento em que o estado foi guardado (`MixSession.save`: sair da tela, pausar, interrupções, e a cada ~1,2 s
+enquanto toca em segundo plano), então música tocando conta como uso.
+
+- **Processo novo**: o estado guardado leva o horário (`savedAt`). Se tem mais de 30 min (ou não tem horário,
+  como o de versões antigas), só o mixer volta (crossfader, master, key lock); os decks abrem vazios e avisam.
+- **Processo vivo, ao voltar à tela** (`setForeground(true)`): se passou de 30 min e nada toca, os decks são
+  esvaziados (`clearDecks`: faixa, restauração pendente, andamento e SYNC; PCM solto; volume e EQ ficam).
+- **Em segundo plano**: ao sair da tela a sessão pede um lembrete de 30 min pela porta `AudioSystem.setIdleTimeout`
+  (no Android, `Handler.postDelayed`, melhor esforço: com o app congelado o sistema pode adiar). Quando vence
+  (`PlatformEvent.IdleTimeout`) a sessão confere o relógio: sem uso e nada tocando, esvazia e guarda o estado
+  vazio; senão agenda de novo para o que falta. A conferência ao voltar é a que vale.
+
 ## Estado após o processo ser encerrado
 
 Se o sistema encerrar o processo mesmo assim (pouca memória, app parado há muito tempo), a sessão volta como estava na próxima abertura:

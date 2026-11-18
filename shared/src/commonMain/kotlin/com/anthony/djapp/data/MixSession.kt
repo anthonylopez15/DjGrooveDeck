@@ -3,6 +3,7 @@ package com.anthony.djapp.data
 import com.anthony.djapp.domain.AudioSystem
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.domain.DeckSnapshot
+import com.anthony.djapp.domain.IdlePolicy
 import com.anthony.djapp.domain.Interruption
 import com.anthony.djapp.domain.InterruptionPolicy
 import com.anthony.djapp.domain.InterruptionReaction
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.time.Clock
 
 /**
  * A sessão de DJ: mixer, decks e o estado deles ([state], imutável). Vive enquanto o processo vive
@@ -56,13 +58,19 @@ class MixSession(
     /** Algum deck tocando agora (estado real do motor). */
     val anyPlaying: Boolean get() = a.playingNow || b.playingNow
 
+    /** Relógio (ms de época); os testes trocam por um falso. */
+    internal var nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() }
+
+    /** Último momento de "uso" (estado guardado); com ele se decide se o app ficou sem uso ([IdlePolicy]). */
+    internal var lastActivityMs: Long = nowMs()
+
     init {
-        // processo novo: volta ao que estava (os decks são recarregados quando a tela aparecer)
-        sessionStore.load()?.let(::restore)
+        // processo novo: volta ao que estava, a menos que tenha ficado sem uso (aí abre limpo)
+        sessionStore.load()?.let(::restoreOrStartClean)
         audio.setListener(::onPlatformEvent)
     }
 
-    private fun update(f: (MixState) -> MixState) = store.update(f)
+    internal fun update(f: (MixState) -> MixState) = store.update(f)
 
     // ---------- mixer ----------
 
@@ -95,7 +103,13 @@ class MixSession(
 
     /** A tela entrou/saiu de cena. */
     fun setForeground(visible: Boolean) {
-        if (visible) memoryPressureInBackground = false
+        if (visible) {
+            memoryPressureInBackground = false
+            audio.setIdleTimeout(null)
+            clearDecksIfIdle() // voltou depois de mais de 30 min sem uso: abre limpo
+        } else {
+            audio.setIdleTimeout(IdlePolicy.LIMIT_MS)
+        }
         update { it.copy(foreground = visible) }
     }
 
