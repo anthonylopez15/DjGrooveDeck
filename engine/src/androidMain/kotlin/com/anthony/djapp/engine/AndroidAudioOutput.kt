@@ -60,6 +60,8 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
             .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
             .build()
             .also { track ->
+                // a capacidade pode ser grande; o que vale para a latência é quanto fica preenchido
+                track.bufferSizeInFrames = (chunkFrames * LATENCY_CHUNKS).coerceAtMost(track.bufferCapacityInFrames)
                 // diagnóstico: para onde o áudio está indo (alto-falante, fone, Bluetooth...)
                 track.addOnRoutingChangedListener({ r ->
                     Log.i(TAG, "rota: ${describe(r.routedDevice)}")
@@ -111,6 +113,7 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
                 }
             }
             at?.let {
+                Log.i(TAG, "saída fechada; falhas de buffer: ${it.underrunCount}")
                 runCatching { it.stop() }
                 runCatching { it.release() }
             }
@@ -119,6 +122,9 @@ class AndroidAudioOutput(context: Context) : AudioOutput {
 
     companion object {
         private const val TAG = "DjAudio"
+
+        /** Blocos de renderização mantidos no buffer do AudioTrack: menos = menos atraso, mais = menos risco de falha. */
+        private const val LATENCY_CHUNKS = 3
 
         private fun describe(d: AudioDeviceInfo?): String {
             if (d == null) return "nenhuma"

@@ -33,6 +33,9 @@ class DjMixer(val sampleRate: Int) {
         /** Alinha a batida e já larga, em qualquer batida. */
         StartOnBeat,
 
+        /** Espera a próxima batida do líder e larga numa batida do seguidor (espera de no máximo uma batida). */
+        StartOnNextBeat,
+
         /** Larga no tempo 1: parte de um início de compasso e entra no próximo início de compasso do líder. */
         StartOnBar,
     }
@@ -64,7 +67,7 @@ class DjMixer(val sampleRate: Int) {
         val prev = pendingAlign
         val merged = if (prev != null && prev.follower === follower) maxOf(mode, prev.mode) else mode
         pendingAlign = AlignRequest(follower, leader, followerGrid, leaderGrid, merged)
-        if (merged == AlignMode.StartOnBar) follower.startPending = true
+        if (merged >= AlignMode.StartOnNextBeat) follower.startPending = true
     }
 
     /** Descarta o alinhamento pedido e ainda não aplicado (ex.: tudo foi pausado antes do próximo bloco). */
@@ -80,7 +83,9 @@ class DjMixer(val sampleRate: Int) {
     private fun applyAlign(r: AlignRequest, frames: Int): Boolean {
         val lt = r.leader.track ?: return true
         val ft = r.follower.track ?: return true
-        if (r.mode == AlignMode.StartOnBar) return startOnBar(r, lt, ft, frames)
+        if (r.mode >= AlignMode.StartOnNextBeat) {
+            return startOnUnit(r, lt, ft, frames, if (r.mode == AlignMode.StartOnBar) BeatGrid.BEATS_PER_BAR else 1)
+        }
         val leaderPhase = r.leaderGrid.phaseAt(r.leader.effectivePositionFrames / lt.sampleRate)
         val followerPos = r.follower.effectivePositionFrames
         val followerPhase = r.followerGrid.phaseAt(followerPos / ft.sampleRate)
@@ -100,15 +105,15 @@ class DjMixer(val sampleRate: Int) {
      * começa no início do bloco já `k` frames antes do seu tempo 1, de modo que chegue nele no mesmo frame.
      * (Só fica um pouco adiantado se o tempo 1 do seguidor está a menos de `k` frames do início da faixa.)
      */
-    private fun startOnBar(r: AlignRequest, lt: Track, ft: Track, frames: Int): Boolean {
+    private fun startOnUnit(r: AlignRequest, lt: Track, ft: Track, frames: Int, unitBeats: Int): Boolean {
         val follower = r.follower
-        val barStart = r.followerGrid.nearestBarStart(follower.effectivePositionFrames / ft.sampleRate)
+        val barStart = r.followerGrid.nearestUnitStart(follower.effectivePositionFrames / ft.sampleRate, unitBeats)
         var framesUntilDownbeat = 0.0
         if (r.leader.playing) {
-            val barPhase = r.leaderGrid.barPhaseAt(r.leader.effectivePositionFrames / lt.sampleRate)
+            val barPhase = r.leaderGrid.unitPhaseAt(r.leader.effectivePositionFrames / lt.sampleRate, unitBeats)
             if (barPhase > BAR_PHASE_EPSILON) {
                 val beatsPerFrame = r.leaderGrid.bpm / 60.0 * r.leader.tempo / sampleRate
-                framesUntilDownbeat = (BeatGrid.BEATS_PER_BAR - barPhase) / beatsPerFrame
+                framesUntilDownbeat = (unitBeats - barPhase) / beatsPerFrame
                 if (framesUntilDownbeat >= frames) return false // o tempo 1 do líder ainda não cai neste bloco
             }
         }

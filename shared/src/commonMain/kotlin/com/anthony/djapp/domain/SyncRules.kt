@@ -2,6 +2,18 @@ package com.anthony.djapp.domain
 
 import kotlin.math.abs
 
+/** Como o play com SYNC larga uma faixa com o outro deck tocando. */
+enum class SyncStart {
+    /** Espera o próximo tempo 1 do outro deck e larga no tempo 1 da faixa. */
+    Bar,
+
+    /** Espera a próxima batida do outro deck e larga numa batida da faixa. */
+    Beat,
+
+    /** Larga na hora, só alinhando a batida. */
+    Now,
+}
+
 /** Os dois decks do app. */
 enum class DeckId {
     A,

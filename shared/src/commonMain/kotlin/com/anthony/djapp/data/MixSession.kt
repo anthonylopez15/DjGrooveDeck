@@ -14,6 +14,7 @@ import com.anthony.djapp.domain.SessionSnapshot
 import com.anthony.djapp.domain.SessionStore
 import com.anthony.djapp.domain.SyncDecision
 import com.anthony.djapp.domain.SyncRules
+import com.anthony.djapp.domain.SyncStart
 import com.anthony.djapp.engine.Deck
 import com.anthony.djapp.engine.DjMixer
 import com.anthony.djapp.engine.Eq3
@@ -92,6 +93,8 @@ class MixSession(
         mixer.keyLock = v
         update { it.copy(keyLock = v) }
     }
+
+    fun setSyncStart(mode: SyncStart) = update { it.copy(syncStart = mode) }
 
     // ---------- tela e avisos (salvar, restaurar, memória e eventos da plataforma: MixSessionLifecycle.kt) ----------
 
@@ -266,7 +269,14 @@ class MixSession(
         val followerGrid = follower.state.beatGrid() ?: return false
         val leaderGrid = leader.state.beatGrid() ?: return false
         // largada (play com SYNC): no tempo 1; sem ser largada (ligar o SYNC tocando): só alinha a batida
-        val mode = if (startFollower) DjMixer.AlignMode.StartOnBar else DjMixer.AlignMode.PhaseOnly
+        val mode = when {
+            !startFollower -> DjMixer.AlignMode.PhaseOnly
+            else -> when (store.value.syncStart) {
+                SyncStart.Bar -> DjMixer.AlignMode.StartOnBar
+                SyncStart.Beat -> DjMixer.AlignMode.StartOnNextBeat
+                SyncStart.Now -> DjMixer.AlignMode.StartOnBeat
+            }
+        }
         mixer.requestAlign(follower.engineDeck, leader.engineDeck, followerGrid, leaderGrid, mode)
         update { it.copy(phaseLocked = true) }
         return true

@@ -2,6 +2,7 @@ package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.domain.LibraryEntry
+import com.anthony.djapp.domain.SyncStart
 import com.anthony.djapp.domain.SyncState
 import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.DjMixer
@@ -127,6 +128,7 @@ class SyncTest {
     fun resumingTheLeaderRelocksBeats() {
         val r = rig()
         r.bothPlaying()
+        r.c.setSyncStart(SyncStart.Bar)
         r.c.toggleSync(DeckId.B)
         r.c.togglePlay(DeckId.A) // pausa
         r.c.deck(DeckId.A).seek(0.31f) // e volta noutro ponto
@@ -142,6 +144,7 @@ class SyncTest {
     @Test
     fun pausedFollowerKeepsItsTempoUntilPlay() {
         val r = rig()
+        r.c.setSyncStart(SyncStart.Bar)
         r.c.togglePlay(DeckId.A) // só o A toca
         r.settle()
 
@@ -159,6 +162,21 @@ class SyncTest {
         assertTrue(r.c.state.value.locked)
         assertTrue(phaseGap(r) < 0.01)
         assertTrue(barGap(r) < 0.01, "os tempos 1 coincidem: ${barGap(r)}")
+    }
+
+    @Test
+    fun defaultStartWaitsOnlyForTheNextBeat() {
+        val r = rig()
+        r.bothPlaying()
+        r.c.toggleSync(DeckId.B)
+        r.c.togglePlay(DeckId.B) // pausa
+        r.c.deck(DeckId.B).seek(0.31f)
+        r.c.togglePlay(DeckId.B) // largada na próxima batida do A
+        r.settleStart()
+
+        assertEquals(SyncStart.Beat, r.c.state.value.syncStart)
+        assertTrue(r.c.b.state.playing)
+        assertTrue(phaseGap(r) < 0.01, "batidas alinhadas: ${phaseGap(r)}")
     }
 
     @Test

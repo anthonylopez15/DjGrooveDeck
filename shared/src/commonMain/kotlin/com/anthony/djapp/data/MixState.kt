@@ -5,6 +5,7 @@ import com.anthony.djapp.domain.DeckSnapshot
 import com.anthony.djapp.domain.DeckView
 import com.anthony.djapp.domain.LibraryEntry
 import com.anthony.djapp.domain.SyncRules
+import com.anthony.djapp.domain.SyncStart
 import com.anthony.djapp.domain.SyncState
 import com.anthony.djapp.engine.BeatGrid
 import com.anthony.djapp.engine.Track
@@ -68,6 +69,8 @@ data class MixState(
     val crossfader: Float = 0.5f,
     val master: Float = 0.8f,
     val keyLock: Boolean = true,
+    /** Como o play com SYNC larga com o outro deck tocando. */
+    val syncStart: SyncStart = SyncStart.Beat,
     /** Encaixe de batidas feito pelo SYNC; pausar, desligar o SYNC ou trocar a faixa desfaz. */
     val phaseLocked: Boolean = false,
     /** A tela está à vista (os decks só são recarregados do arquivo com ela à vista). */

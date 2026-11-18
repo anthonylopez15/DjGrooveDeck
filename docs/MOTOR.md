@@ -78,6 +78,9 @@ Dois pedidos para o mesmo seguidor antes do bloco se fundem pelo maior modo (o "
 
 ### Largada no tempo 1 (`StartOnBar`)
 
+Há também `StartOnNextBeat` (padrão do app, `SyncStart.Beat`: mesma lógica, mas a unidade é a batida em vez do compasso, então a
+espera é de no máximo uma batida) e `StartOnBeat` (larga na hora). Não há seletor na tela; muda-se `MixState.syncStart`.
+
 A grade tem o compasso: `BeatGrid.barPhaseAt` (0 = tempo 1 até 4 batidas) e `nearestBarStart`. O tempo 1 é o das
 linhas laranja da onda, contado da primeira batida da grade (o detector acha o ritmo, não qual batida abre o
 compasso). Em cada bloco o mixer:

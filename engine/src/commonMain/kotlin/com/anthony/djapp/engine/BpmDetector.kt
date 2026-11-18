@@ -19,15 +19,21 @@ class BeatGrid(val bpm: Double, val firstBeatSec: Double) {
      * [BEATS_PER_BAR]. O tempo 1 é o das linhas laranja da onda: uma batida a cada [BEATS_PER_BAR]
      * contadas da primeira batida da grade (o detector acha o ritmo, não qual batida abre o compasso).
      */
-    fun barPhaseAt(sec: Double): Double {
-        val beats = (sec - firstBeatSec) * bpm / 60.0
-        return beats - floor(beats / BEATS_PER_BAR) * BEATS_PER_BAR
-    }
+    fun barPhaseAt(sec: Double): Double = unitPhaseAt(sec, BEATS_PER_BAR)
 
     /** Início de compasso (tempo 1) mais próximo de [sec], nunca antes da primeira batida da grade. */
-    fun nearestBarStart(sec: Double): Double {
-        val bars = round((sec - firstBeatSec) * bpm / 60.0 / BEATS_PER_BAR).coerceAtLeast(0.0)
-        return firstBeatSec + bars * BEATS_PER_BAR * 60.0 / bpm
+    fun nearestBarStart(sec: Double): Double = nearestUnitStart(sec, BEATS_PER_BAR)
+
+    /** Posição em [sec] dentro de um grupo de [unitBeats] batidas (1 = batida, [BEATS_PER_BAR] = compasso). */
+    fun unitPhaseAt(sec: Double, unitBeats: Int): Double {
+        val beats = (sec - firstBeatSec) * bpm / 60.0
+        return beats - floor(beats / unitBeats) * unitBeats
+    }
+
+    /** Início de grupo de [unitBeats] batidas mais próximo de [sec], nunca antes da primeira batida. */
+    fun nearestUnitStart(sec: Double, unitBeats: Int): Double {
+        val units = round((sec - firstBeatSec) * bpm / 60.0 / unitBeats).coerceAtLeast(0.0)
+        return firstBeatSec + units * unitBeats * 60.0 / bpm
     }
 
     companion object {
