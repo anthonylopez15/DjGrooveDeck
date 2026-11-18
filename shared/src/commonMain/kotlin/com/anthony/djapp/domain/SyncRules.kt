@@ -69,7 +69,10 @@ sealed interface PlayDecision {
  */
 object SyncRules {
     /** Limite do ajuste de tempo (±%). */
-    const val MAX_TEMPO_PERCENT = 16f
+    const val MAX_TEMPO_PERCENT = 20f
+
+    /** Passo dos botões − e + do andamento (%). */
+    const val TEMPO_STEP_PERCENT = 1f
 
     /** Diferença máxima de BPM efetivo para considerar os decks no mesmo andamento. */
     const val BPM_MATCH_TOLERANCE = 0.05
@@ -107,7 +110,7 @@ object SyncRules {
 
     /**
      * Pode travar as batidas: os dois têm BPM e o andamento efetivo já é o mesmo. Decks distantes demais
-     * (fora dos ±16%) não casam e não devem aparecer "travados".
+     * (fora dos ±20%) não casam e não devem aparecer "travados".
      */
     fun canLockBeats(follower: DeckView, leader: DeckView): Boolean =
         follower.bpm != null && leader.bpm != null && bpmMatched(follower, leader)

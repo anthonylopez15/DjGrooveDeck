@@ -29,7 +29,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `DjViewModelTest` (`shared`, apresentação) | Ações viram estado, biblioteca só com o deck parado, carregar faixa (progresso e erro), avisos que somem, recarga após o processo morrer e após liberar memória, sem repetir sem parar uma recarga que falhou. |
 | `LibraryViewModelTest` (`shared`, apresentação) | Lista de arquivos: raiz com as pastas vinculadas, listar pasta (com "carregando"), cache sem reanálise, análise com falha, entrar/voltar, pasta inacessível, troca de pasta antes de listar, adicionar/remover pasta. |
 | `AnalysisCachePrunerTest` (`shared`) | Limpeza do cache de BPM: apaga o que mudou ou sumiu da pasta listada e de pastas removidas; não toca subpastas, pastas irmãs de nome parecido, outras árvores nem provedores sem caminho. |
-| `TempoControlTest` (`shared`, sessão) | Andamento manual: vale no estado e no motor, limite ±16%, deck vazio ignora, mexer no seguidor desliga o SYNC, mexer no líder faz o seguidor acompanhar e re-alinhar, seguidor parado fica quieto. |
+| `TempoControlTest` (`shared`, sessão) | Andamento manual: vale no estado e no motor, limite ±20%, deck vazio ignora, mexer no seguidor desliga o SYNC, mexer no líder faz o seguidor acompanhar e re-alinhar, seguidor parado fica quieto. |
 | `PlaybackGateTest` (`shared`, sessão) | O play passa pela porta `AudioSystem`: negado não toca e avisa; pausar e deck vazio não pedem. |
 | `PlatformEventsTest` (`shared`, sessão) | "A plataforma detecta, a sessão decide": restaura do `SessionStore` ao nascer; interrupção tocando pausa, salva e avisa; parado não faz nada; falta de memória só age com a tela fora de cena; pausa pedida sempre salva. |
 | `SyncRulesTest` (`shared`, domínio) | Regras puras do SYNC e do transporte: BPM igual, travado, tempo do seguidor e limite, decisões de SYNC e de play. |
@@ -67,7 +67,7 @@ Roteiros já executados com sucesso:
 - Foco de áudio: com um deck tocando, `adb shell am start -a android.intent.action.VIEW -d content://media/external/audio/media/<id> -t audio/mpeg` abre a música em outro player, que toma o foco; o set deve pausar (`adb shell dumpsys audio | grep -A3 "Audio Focus stack"` mostra quem tem o foco).
 - Saída de áudio ociosa: `adb shell dumpsys audio | grep AudioPlaybackConfiguration` não mostra o app com ele aberto e parado; mostra ao tocar; some ~5 s depois de pausar.
 - Memória baixa tocando em segundo plano: com o A parado e o B tocando, `adb shell am send-trim-memory <pid> RUNNING_LOW` solta a faixa do A (heap cai ~40–50 MB) e o B segue tocando; ao voltar, o A mostra "Carregando". (`BACKGROUND` é recusado enquanto o serviço toca.)
-- Andamento: segurar + no deck B (`adb shell input swipe x y x y 3000`) e conferir o percentual; medir a velocidade real (posição na tela contra `date +%s.%N`): em +16% deve dar ~1,16x.
+- Andamento: segurar + no deck B (`adb shell input swipe x y x y 3000`) e conferir o percentual; medir a velocidade real (posição na tela contra `date +%s.%N`): em +20% deve dar ~1,20x.
 - Processo encerrado em segundo plano (`adb shell am kill com.anthony.djapp`) e restauração ao reabrir.
 
 - Desligar e religar um fone Bluetooth com música tocando (acompanhar com `adb logcat -s DjAudio`): pausa na desconexão, rota volta ao religar. O adb não consegue simular isso (o Android bloqueia o aviso vindo do shell); precisa de um fone de verdade.

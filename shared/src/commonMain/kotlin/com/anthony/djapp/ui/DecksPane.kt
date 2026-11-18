@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.anthony.djapp.domain.DeckId
+import com.anthony.djapp.domain.SyncRules
 import com.anthony.djapp.presentation.DeckMeters
 import com.anthony.djapp.presentation.DjAction
 import com.anthony.djapp.presentation.DjUiState
@@ -39,9 +40,9 @@ internal fun DeckPlatter(
             Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            // andamento: um toque = 0,1%; segurando repete e acelera
-            RepeatButton("−", deck.hasTrack, { fast ->
-                onAction(DjAction.SetTempo(id, stepTempo(deck.tempoPercent, -1, fast)))
+            // andamento: um toque = 1%; segurando repete
+            RepeatButton("−", deck.hasTrack, {
+                onAction(DjAction.SetTempo(id, stepTempo(deck.tempoPercent, -1)))
             }, Modifier.width(44.dp))
             SyncButton(
                 state = deck.syncState,
@@ -49,18 +50,16 @@ internal fun DeckPlatter(
                 onClick = { onAction(DjAction.ToggleSync(id)) },
                 modifier = Modifier.weight(1f),
             )
-            RepeatButton("+", deck.hasTrack, { fast ->
-                onAction(DjAction.SetTempo(id, stepTempo(deck.tempoPercent, +1, fast)))
+            RepeatButton("+", deck.hasTrack, {
+                onAction(DjAction.SetTempo(id, stepTempo(deck.tempoPercent, +1)))
             }, Modifier.width(44.dp))
         }
     }
 }
 
-/** Próximo andamento ao apertar − ou + ([direction]): passo de 0,1% (0,5% se [fast]), com 1 casa. */
-private fun stepTempo(current: Float, direction: Int, fast: Boolean): Float {
-    val step = if (fast) 0.5f else 0.1f
-    return kotlin.math.round((current + direction * step) * 10f) / 10f
-}
+/** Próximo andamento ao apertar − ou + ([direction]): de 1 em 1% (+1,0%, +2,0%...), até ±[SyncRules.MAX_TEMPO_PERCENT]. */
+private fun stepTempo(current: Float, direction: Int): Float =
+    kotlin.math.round(current + direction * SyncRules.TEMPO_STEP_PERCENT)
 
 @Composable
 internal fun WavesPane(

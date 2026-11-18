@@ -50,9 +50,9 @@ class SyncRulesTest {
         assertEquals(3.278f, SyncRules.followerTempo(deck(122.0), deck(126.0))!!, 0.01f)
         // leader acelerado: o seguidor iguala o BPM efetivo, não o original
         assertEquals(8.443f, SyncRules.followerTempo(deck(122.0), deck(126.0, tempo = 5f))!!, 0.01f) // 126 × 1,05 = 132,3 BPM
-        // fora do alcance: limitado a ±16%
-        assertEquals(16f, SyncRules.followerTempo(deck(100.0), deck(150.0)))
-        assertEquals(-16f, SyncRules.followerTempo(deck(150.0), deck(100.0)))
+        // fora do alcance: limitado a ±20%
+        assertEquals(20f, SyncRules.followerTempo(deck(100.0), deck(150.0)))
+        assertEquals(-20f, SyncRules.followerTempo(deck(150.0), deck(100.0)))
         assertNull(SyncRules.followerTempo(deck(bpm = null), deck()))
     }
 

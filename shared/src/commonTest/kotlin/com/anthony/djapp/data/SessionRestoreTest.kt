@@ -50,7 +50,7 @@ class SessionRestoreTest {
         // valores fora da faixa são limitados, não quebram
         val d = assertNotNull(SessionSnapshotCodec.decode("v=1\ncrossfader=7\na.id=x\na.name=n\na.tempo=90\na.volume=NaN"))
         assertEquals(1f, d.crossfader)
-        assertEquals(16f, d.a!!.tempoPercent)
+        assertEquals(20f, d.a!!.tempoPercent)
         assertEquals(1f, d.a.volume)
     }
 

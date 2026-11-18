@@ -96,10 +96,10 @@ fun RestartButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Mo
 
 /**
  * Botão que repete enquanto está pressionado (andamento − e +): um passo ao tocar; segurando, depois de
- * 0,4 s repete a cada 70 ms e, passado 1 s, com passos maiores ([onStep] recebe `fast`).
+ * 0,4 s repete a cada 150 ms.
  */
 @Composable
-fun RepeatButton(label: String, enabled: Boolean, onStep: (fast: Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun RepeatButton(label: String, enabled: Boolean, onStep: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(8.dp)
     val a = if (enabled) 1f else 0.35f
     val step by rememberUpdatedState(onStep)
@@ -112,13 +112,12 @@ fun RepeatButton(label: String, enabled: Boolean, onStep: (fast: Boolean) -> Uni
                 if (!enabled) return@pointerInput
                 detectTapGestures(
                     onPress = {
-                        step(false)
+                        step()
                         coroutineScope {
                             val repeat = launch {
                                 delay(REPEAT_START_MS)
-                                var n = 0
                                 while (true) {
-                                    step(n++ > REPEAT_FAST_AFTER)
+                                    step()
                                     delay(REPEAT_EVERY_MS)
                                 }
                             }
@@ -135,8 +134,7 @@ fun RepeatButton(label: String, enabled: Boolean, onStep: (fast: Boolean) -> Uni
 }
 
 private const val REPEAT_START_MS = 400L
-private const val REPEAT_EVERY_MS = 70L
-private const val REPEAT_FAST_AFTER = 14 // ~1 s de repetição
+private const val REPEAT_EVERY_MS = 150L
 
 /** SYNC de 3 estados: cinza (desligado), contorno azul (ligado) e azul cheio (batidas travadas). */
 @Composable

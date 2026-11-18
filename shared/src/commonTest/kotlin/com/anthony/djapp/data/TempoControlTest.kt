@@ -44,12 +44,12 @@ class TempoControlTest {
     }
 
     @Test
-    fun tempoIsLimitedToSixteenPercent() {
+    fun tempoIsLimitedToTwentyPercent() {
         val r = rig()
         r.c.setTempo(DeckId.A, 40f)
-        assertEquals(16f, r.c.a.state.tempoPercent)
+        assertEquals(20f, r.c.a.state.tempoPercent)
         r.c.setTempo(DeckId.A, -40f)
-        assertEquals(-16f, r.c.a.state.tempoPercent)
+        assertEquals(-20f, r.c.a.state.tempoPercent)
     }
 
     @Test

@@ -106,7 +106,8 @@ private fun DeckHeader(
                 if (loadingName != null) {
                     Text("${(deck.loadProgress * 100).toInt()}%", fontSize = 13.sp, color = color)
                 } else if (deck.hasTrack) {
-                    // tempo restante e, ao lado, o BPM efetivo (visível também na lista de músicas)
+                    // tempo restante e, ao lado, o BPM fixo da música (o mesmo da lista); com o andamento alterado,
+                    // o BPM efetivo aparece no prato
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "-" + formatTenths(deck.durationTenths - meters.elapsedTenths).substringBeforeLast('.'),
@@ -114,10 +115,10 @@ private fun DeckHeader(
                             color = Idle,
                         )
                         Text(
-                            deck.effectiveBpm?.let { "${formatBpm(it)} BPM" } ?: "-- BPM",
+                            deck.bpm?.let { "${formatBpm(it)} BPM" } ?: "-- BPM",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (deck.effectiveBpm == null) {
+                            color = if (deck.bpm == null) {
                                 Idle
                             } else if (bpmMatched) {
                                 SyncBlue

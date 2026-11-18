@@ -76,7 +76,7 @@ class EngineStressTest {
                 ops++
                 when (rnd(11)) {
                     0 -> deck.seekToFraction(rnd(1000) / 1000f)
-                    1 -> deck.tempo = rndD(0.84, 1.16)
+                    1 -> deck.tempo = rndD(0.80, 1.20)
                     2 -> mixer.keyLock = !mixer.keyLock
                     3 -> {
                         deck.lowDb = rndD(-30.0, 6.0)

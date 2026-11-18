@@ -169,10 +169,10 @@ class SyncTest {
         r.c.loadTrack(DeckId.B, track("B", 128.0, 0.3))
         r.bothPlaying()
 
-        r.c.toggleSync(DeckId.B) // 85/128 pede -34%: passa do limite de ±16%
+        r.c.toggleSync(DeckId.B) // 85/128 pede -34%: passa do limite de ±20%
         r.settle()
 
-        assertEquals(-16f, r.c.b.state.tempoPercent)
+        assertEquals(-20f, r.c.b.state.tempoPercent)
         assertFalse(r.c.state.value.bpmMatched)
         assertFalse(r.c.state.value.locked, "BPM diferentes não podem aparecer como travados")
         assertEquals(SyncState.Armed, r.c.state.value.syncState(DeckId.B)) // ligado, mas sem travar
@@ -249,9 +249,9 @@ class SyncTest {
         assertFalse(r.c.a.state.playing)
         assertFalse(r.c.b.state.playing)
 
-        // A acelera além do que B alcança (122 BPM + 16% = 141,5 < 146): não dá para travar de novo.
+        // A acelera além do que B alcança (122 BPM + 20% = 146,4 < 151,2): não dá para travar de novo.
         // Antes, o encaixe antigo ficava preso e os botões apareciam "travados" mesmo assim.
-        r.c.a.changeTempo(16f)
+        r.c.a.changeTempo(20f)
         r.c.togglePlay(DeckId.A)
         r.c.togglePlay(DeckId.B)
         r.settle()

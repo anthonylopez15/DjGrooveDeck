@@ -11,7 +11,7 @@
 
 - **Play/Pause** e **voltar ao início** (botão ao lado do play).
 - **Buscar**: toque ou arraste na barra de visão geral, ou arraste a onda ampliada.
-- **Tempo** (±16%): muda a velocidade. Com **KEY** ligado a afinação é mantida; desligado, acelerar sobe o tom (toca-discos).
+- **Tempo** (±20%): muda a velocidade. Com **KEY** ligado a afinação é mantida; desligado, acelerar sobe o tom (toca-discos).
 - O número no prato é o BPM atual; fica **azul** quando os dois decks têm o mesmo BPM.
 
 > Um deck que está tocando não troca de faixa: pause antes.
@@ -20,9 +20,12 @@
 
 Embaixo de cada prato há **[ − ] SYNC [ + ]**:
 
-- **+ / −**: um toque muda o andamento em **0,1%**. **Segurando**, repete e acelera (depois de ~1 s passa a
-  0,5% por passo). O limite é **±16%**; o percentual aparece no prato, e o BPM efetivo muda junto.
+- **+ / −**: cada toque muda o andamento de **1 em 1%** (+1,0%, +2,0%...). **Segurando**, repete (um passo a
+  cada 0,15 s). O limite é **±20%**; o percentual aparece no prato, e o BPM efetivo muda junto.
 - **Tocar no percentual** (o "+6.7%" no prato) volta ao andamento original (0%).
+- O **BPM embaixo do nome da música** (no cabeçalho) é sempre o **BPM fixo** da faixa, o mesmo da lista de
+  músicas, e não muda com o andamento. O número grande no **prato** é o BPM com o andamento aplicado (BPM fixo
+  × andamento): é nele que você vê o efeito dos botões.
 - Com **KEY** ligado, a música acelera ou desacelera **sem mudar o tom**; desligado, o tom acompanha (como num toca-discos).
 - **SYNC:** mexer no andamento de um deck que **segue** o outro desliga o SYNC dele (você assumiu o controle).
   Mexer no de quem **lidera** faz o seguidor acompanhar, e as batidas se alinham de novo se os dois tocam.
@@ -33,7 +36,7 @@ Embaixo de cada prato há **[ − ] SYNC [ + ]**:
 - Com os dois tocando, as batidas também se alinham e o botão fica **cheio** (travado).
 - Dar play num deck com SYNC enquanto o outro toca faz a largada já na batida certa.
 - Para soltar: toque no SYNC do seguidor (volta à velocidade anterior) ou no do líder (cada um fica como está).
-- Precisa de BPM detectado nos dois decks; andamentos muito diferentes (>16%) não casam.
+- Precisa de BPM detectado nos dois decks; andamentos muito diferentes (>20%) não casam.
 
 ## Mixer
 

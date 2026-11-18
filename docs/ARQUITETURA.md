@@ -44,7 +44,7 @@ Regras puras, sem Compose nem plataforma (garantido por `ArchitectureTest`):
 | `TrackRepository.kt` | Porta da biblioteca (`LibraryEntry`, listar, analisar, decodificar) e `EmptyTrackRepository`. |
 | `SessionSnapshot.kt` | Modelo do estado guardado (`SessionSnapshot`, `DeckSnapshot`) e a porta `SessionStore`. |
 | `AudioSystem.kt` | Porta do sistema de áudio: `requestPlayback()`, `outputRunning` e eventos `PlatformEvent` (interrupção, falta de memória). |
-| `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±16%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
+| `SyncRules.kt` | `DeckId`, `SyncState`, `DeckView` (foto de um deck), decisões `SyncDecision` e `PlayDecision`, e as regras: BPM igual, travado, estado do botão, tempo do seguidor (±20%), quando travar, toggle de SYNC, play/largada alinhada, realinhar no restart, não trocar faixa tocando. |
 | `Interruptions.kt` | `Interruption` (saída desconectada, outro app, temporária, play negado, pausa pedida) e `InterruptionPolicy`: pausar, salvar, avisar. |
 
 A `MixSession` monta as fotos (`DeckState.view()`; para decidir, com o estado real do motor), pergunta às regras e executa a decisão. A plataforma (`AudioSystem`) só detecta eventos e os emite; a `MixSession` os trata (`onPlatformEvent`).

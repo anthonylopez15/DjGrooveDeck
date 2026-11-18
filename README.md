@@ -44,7 +44,7 @@ Funciona (testado por testes unitários do DSP e no aparelho; o áudio com músi
 - Waveform ampliada colorida (grave/agudo) com grade de batidas
 - Detecção de BPM (80–160, andamento fixo)
 - SYNC: iguala o BPM e alinha as batidas; ao desligar volta à velocidade anterior
-- Tempo ±16% com **key lock** (time-stretch WSOLA): muda a velocidade sem mudar o tom; botão KEY desliga (modo toca-discos)
+- Tempo ±20% com **key lock** (time-stretch WSOLA): muda a velocidade sem mudar o tom; botão KEY desliga (modo toca-discos)
 - Música em segundo plano: serviço em primeiro plano com notificação (abrir e Pausar); mixer, faixas e estado vivem na sessão do processo, então ao voltar tudo está como antes. Sem música tocando, o áudio desliga ao sair da tela
 - EQ de 3 bandas por deck com "kill", volume por deck, crossfader, master, medidores de nível
 
