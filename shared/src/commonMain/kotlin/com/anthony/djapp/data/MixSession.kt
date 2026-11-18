@@ -1,6 +1,7 @@
 package com.anthony.djapp.data
 
 import com.anthony.djapp.domain.AudioSystem
+import com.anthony.djapp.domain.AutoFade
 import com.anthony.djapp.domain.DeckId
 import com.anthony.djapp.domain.DeckSnapshot
 import com.anthony.djapp.domain.IdlePolicy
@@ -76,10 +77,79 @@ class MixSession(
     // ---------- mixer ----------
 
     fun changeCrossfader(x: Float) {
+        glideTarget = null // mexer à mão tem prioridade: a passagem para (o deck de origem segue tocando)
+        handoff = false
+        setCrossfader(x)
+    }
+
+    private fun setCrossfader(x: Float) {
         val v = x.coerceIn(0f, 1f)
         mixer.crossfader = v
         update { it.copy(crossfader = v) }
     }
+
+    /** Ligar/desligar o auto fade do crossfader; desligar para a passagem que estiver em curso. */
+    fun toggleAutoFade() {
+        val on = !store.value.autoFade
+        glideTarget = null
+        handoff = false
+        update { it.copy(autoFade = on) }
+    }
+
+    /** Ponta para onde o crossfader está indo agora; null = parado. */
+    private var glideTarget: Float? = null
+
+    /** O fade acorda o deck de destino (estava parado): ao chegar, o de origem pausa. */
+    private var handoff = false
+
+    private var glideMs = 0L
+
+    /**
+     * Um passo do auto fade (a cada quadro, junto com [syncFromEngine]). Começa quando o crossfader está
+     * todo do lado de um deck que toca e vai até a ponta do outro deck; para ao chegar, ao desligar o
+     * botão ou ao mexer no crossfader. Depois de começar, vai até o fim mesmo que a faixa de origem acabe
+     * ou seja pausada no caminho. Ao chegar, o botão volta a não apertado.
+     */
+    internal fun stepAutoFade() {
+        val now = nowMs()
+        val dt = now - glideMs
+        glideMs = now
+        val s = store.value
+        val x = s.crossfader
+        if (!s.autoFade) {
+            glideTarget = null
+            handoff = false
+            return
+        }
+        if (glideTarget == null && AutoFade.shouldStart(x, a.playingNow, b.playingNow)) {
+            glideTarget = AutoFade.targetFor(x).also(::startHandoffIfNeeded)
+        }
+        val target = glideTarget ?: return
+        val next = AutoFade.next(x, target, dt)
+        setCrossfader(next)
+        if (next == target) {
+            glideTarget = null
+            finishHandoff(target)
+            update { it.copy(autoFade = false) } // missão cumprida: o botão solta
+        }
+    }
+
+    /** Se o deck de destino está parado (e tem faixa), dá play nele: o fade passa a música de um para o outro. */
+    private fun startHandoffIfNeeded(target: Float) {
+        val dest = destinationOf(target)
+        handoff = !dest.playingNow && !dest.state.startPending && dest.state.hasTrack && !dest.state.loading
+        if (handoff) togglePlay(if (target > 0.5f) DeckId.B else DeckId.A)
+    }
+
+    /** Chegou à ponta: o deck de origem pausa, se o de destino tocando de fato. */
+    private fun finishHandoff(target: Float) {
+        if (!handoff) return
+        handoff = false
+        val originId = if (target > 0.5f) DeckId.A else DeckId.B
+        if (destinationOf(target).playingNow && deck(originId).playingNow) togglePlay(originId)
+    }
+
+    private fun destinationOf(target: Float): DeckSession = if (target > 0.5f) b else a
 
     fun changeMaster(x: Float) {
         val v = x.coerceIn(0f, 1f)
@@ -123,6 +193,7 @@ class MixSession(
     fun syncFromEngine() {
         a.syncFromEngine()
         b.syncFromEngine()
+        stepAutoFade()
     }
 
     // ---------- regras ----------

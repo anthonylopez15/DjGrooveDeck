@@ -80,9 +80,7 @@ fun DjApp(viewModel: DjViewModel, libraryViewModel: LibraryViewModel) {
                             MixerPane(state, meters, onAction, Modifier.weight(1.6f))
                         }
                     }
-                    TabBar(state.tab, state.keyLock, { onAction(DjAction.ToggleKeyLock) }) {
-                        onAction(DjAction.SelectTab(it))
-                    }
+                    TabBar(state, onAction)
                     TransportRow(state, onAction)
                 }
             }

@@ -55,6 +55,8 @@ data class DjUiState(
     val crossfader: Float,
     val master: Float,
     val keyLock: Boolean,
+    /** Auto-centro do crossfader ligado. */
+    val autoFade: Boolean,
     /** BPM efetivo igual nos dois decks (números em azul). */
     val bpmMatched: Boolean,
     val tab: Tab,
@@ -87,6 +89,7 @@ internal fun uiStateOf(mix: MixState, screen: ScreenState): DjUiState = DjUiStat
     crossfader = mix.crossfader,
     master = mix.master,
     keyLock = mix.keyLock,
+    autoFade = mix.autoFade,
     bpmMatched = mix.bpmMatched,
     tab = screen.tab,
     browsing = screen.browsing,

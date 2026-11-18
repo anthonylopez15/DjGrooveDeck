@@ -31,6 +31,9 @@ sealed interface DjAction {
 
     data object ToggleKeyLock : DjAction
 
+    /** Liga/desliga a volta suave do crossfader ao meio. */
+    data object ToggleAutoFade : DjAction
+
     data class SelectTab(val tab: Tab) : DjAction
 
     /** Abre a biblioteca para carregar no [deck] (só se ele não estiver tocando). */

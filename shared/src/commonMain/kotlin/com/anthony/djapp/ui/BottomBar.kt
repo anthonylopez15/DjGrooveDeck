@@ -31,26 +31,29 @@ import com.anthony.djapp.presentation.DjAction
 import com.anthony.djapp.presentation.DjUiState
 import com.anthony.djapp.presentation.Tab
 
-// Rodapé: abas (ONDAS, MIXER, KEY) e transporte (voltar ao início, play, crossfader).
+// Rodapé: abas (ONDAS, MIXER, KEY, FADE) e transporte (voltar ao início, play, crossfader).
 
 @Composable
-internal fun TabBar(selected: Tab, keyLock: Boolean, onToggleKey: () -> Unit, onSelect: (Tab) -> Unit) {
+internal fun TabBar(state: DjUiState, onAction: (DjAction) -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(Color(0xFF10151B)).padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
         Tab.entries.forEach { t ->
-            val c = if (t == selected) Color(0xFF3B82F6) else Idle
-            TabItem(t.label, c, if (t == Tab.Waves) TabIconKind.Waves else TabIconKind.Mixer, 28.dp) { onSelect(t) }
+            val c = if (t == state.tab) Color(0xFF3B82F6) else Idle
+            TabItem(t.label, c, if (t == Tab.Waves) TabIconKind.Waves else TabIconKind.Mixer, 28.dp) { onAction(DjAction.SelectTab(t)) }
         }
         // KEY: mantém o tom ao mudar o andamento (tempo e SYNC); cadeado fechado = ligado
         TabItem(
             "KEY",
-            if (keyLock) Color(0xFF3B82F6) else Idle,
-            if (keyLock) TabIconKind.KeyLock else TabIconKind.KeyUnlock,
+            if (state.keyLock) Color(0xFF3B82F6) else Idle,
+            if (state.keyLock) TabIconKind.KeyLock else TabIconKind.KeyUnlock,
             20.dp,
-            onToggleKey,
-        )
+        ) { onAction(DjAction.ToggleKeyLock) }
+        // FADE: com ele apertado, o crossfader passa sozinho ao outro deck; solta ao chegar
+        TabItem("FADE", if (state.autoFade) Color(0xFF3B82F6) else Idle, TabIconKind.Fade, 20.dp) {
+            onAction(DjAction.ToggleAutoFade)
+        }
     }
 }
 

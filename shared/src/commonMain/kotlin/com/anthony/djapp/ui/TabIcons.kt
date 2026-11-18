@@ -47,6 +47,11 @@ fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier) {
                     drawLine(color, Offset(x - w * 0.12f, y), Offset(x + w * 0.12f, y), strokeWidth = sw * 2.2f, cap = StrokeCap.Round)
                 }
             }
+            TabIconKind.Fade -> {
+                // duas curvas que se cruzam: um deck sobe enquanto o outro desce
+                drawLine(color, Offset(w * 0.1f, h * 0.12f), Offset(w * 0.9f, h * 0.88f), strokeWidth = sw * 1.4f, cap = StrokeCap.Round)
+                drawLine(color, Offset(w * 0.1f, h * 0.88f), Offset(w * 0.9f, h * 0.12f), strokeWidth = sw * 1.4f, cap = StrokeCap.Round)
+            }
             TabIconKind.KeyLock, TabIconKind.KeyUnlock -> {
                 // cadeado: corpo + argola (fechada ou aberta)
                 val bodyTop = h * 0.46f
@@ -83,4 +88,4 @@ fun TabIcon(kind: TabIconKind, color: Color, modifier: Modifier = Modifier) {
 }
 
 /** Qual ícone desenhar em [TabIcon]. */
-enum class TabIconKind { Waves, Mixer, KeyLock, KeyUnlock }
+enum class TabIconKind { Waves, Mixer, KeyLock, KeyUnlock, Fade }

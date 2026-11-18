@@ -85,6 +85,7 @@ class DjViewModel(
             is DjAction.ChangeCrossfader -> session.changeCrossfader(action.value)
             is DjAction.ChangeMaster -> session.changeMaster(action.value)
             DjAction.ToggleKeyLock -> session.toggleKeyLock()
+            DjAction.ToggleAutoFade -> session.toggleAutoFade()
             is DjAction.SelectTab -> screen.update { it.copy(tab = action.tab) }
             is DjAction.OpenLibrary -> openLibrary(action.deck)
             DjAction.CloseLibrary -> screen.update { it.copy(browsing = false, libraryStatus = null) }

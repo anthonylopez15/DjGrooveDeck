@@ -69,6 +69,8 @@ data class MixState(
     val crossfader: Float = 0.5f,
     val master: Float = 0.8f,
     val keyLock: Boolean = true,
+    /** Botão ligado: o crossfader todo de um lado, com aquele deck tocando, volta sozinho ao meio. */
+    val autoFade: Boolean = false,
     /** Como o play com SYNC larga com o outro deck tocando. */
     val syncStart: SyncStart = SyncStart.Beat,
     /** Encaixe de batidas feito pelo SYNC; pausar, desligar o SYNC ou trocar a faixa desfaz. */

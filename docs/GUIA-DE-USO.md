@@ -50,6 +50,8 @@ Embaixo de cada prato há **[ − ] SYNC [ + ]**:
 
 Aba **MIXER**: EQ de 3 bandas por deck (esquerda total = corta a banda), fader de volume, medidores de nível, **crossfader** (A ↔ B) e **master**.
 
+O botão **FADE** (na barra de abas, ao lado de KEY, visível nas duas abas, junto do SYNC e do crossfader) passa o crossfader sozinho, de forma suave (cerca de 5 s de ponta a ponta), até a ponta do outro deck quando ele está no último quarto do lado de um deck que está tocando (até 25% para A, a partir de 75% para B). Se o deck de destino está parado (e tem faixa), ele dá play quando o fade começa e o deck de origem **só pausa quando o fade chega a 100%**; se o destino já toca, ninguém é pausado. Ao chegar, o botão **solta** (volta a não apertado) e o crossfader fica na ponta; para passar de volta, aperte de novo. Mexer no crossfader com o dedo, desligar o botão interrompe a passagem; se a faixa de origem acabar (ou for pausada) no meio do fade, o crossfader segue até o fim. O botão fica apertado durante o fade. Ela anda junto com a tela (a cada quadro); com a tela fora de cena espera. O botão volta desligado ao reabrir o app.
+
 ## Ficar muito tempo sem usar
 
 Se o app ficar **mais de 30 minutos sem uso**, ele solta as faixas da memória e **abre limpo**, sem reabrir as

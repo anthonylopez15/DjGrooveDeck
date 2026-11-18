@@ -12,7 +12,7 @@ Tudo de uma vez (lint + testes + Android Lint + compilação comum do iOS): `./g
 
 Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: use `--info` para ver as linhas `STRESS:` e `STRESS_RTF=`.
 
-## Suítes (167 testes)
+## Suítes (181 testes)
 
 | Arquivo | Cobre |
 |---|---|
@@ -33,6 +33,7 @@ Relatórios em `*/build/reports/tests/`. Saída de métricas do teste de carga: 
 | `TempoControlTest` (`shared`, sessão) | Andamento manual: vale no estado e no motor, limite ±20%, deck vazio ignora, mexer no seguidor desliga o SYNC, mexer no líder faz o seguidor acompanhar e re-alinhar, seguidor parado fica quieto. |
 | `IdleCleanupTest` (`shared`, sessão) | 30 min sem uso: estado antigo abre com decks limpos (mixer volta) e avisa; recente restaura; ao voltar à tela esvazia só passando de 30 min e se nada toca; salvar tocando conta como uso; temporizador em segundo plano (agenda, cancela, reagenda o que falta, não esvazia tocando). |
 | `BarStartSessionTest` (`shared`, sessão) | Play com SYNC: outro parado larga já do tempo 1 mais próximo; outro tocando espera e o estado mostra a espera; tocar de novo cancela; sem SYNC não encaixa; faixa sem BPM só toca; pausa geral desfaz a espera. |
+| `AutoFadeTest` (`shared`, sessão e domínio) | Auto fade do crossfader: só começa na zona (até 25% / a partir de 75%) com o deck daquele lado tocando, vai à ponta oposta em ~5 s sem passar dela, solta o botão ao chegar (não volta sozinho; apertar de novo volta), destino parado começa a tocar e a origem só pausa ao chegar (destino já tocando ou sem faixa: ninguém pausa), funciona nos dois lados, recomeça depois de mexer à mão, para ao desligar o botão ou ao mexer à mão (a origem acabar no meio não interrompe o fade), intervalo longo entre quadros não dá salto. |
 | `PlaybackGateTest` (`shared`, sessão) | O play passa pela porta `AudioSystem`: negado não toca e avisa; pausar e deck vazio não pedem. |
 | `PlatformEventsTest` (`shared`, sessão) | "A plataforma detecta, a sessão decide": restaura do `SessionStore` ao nascer; interrupção tocando pausa, salva e avisa; parado não faz nada; falta de memória só age com a tela fora de cena; pausa pedida sempre salva. |
 | `SyncRulesTest` (`shared`, domínio) | Regras puras do SYNC e do transporte: BPM igual, travado, tempo do seguidor e limite, decisões de SYNC e de play. |
